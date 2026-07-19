@@ -1,7 +1,8 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
+import { PwaRegister } from "@/components/PwaRegister";
 
 const jakarta = Plus_Jakarta_Sans({
   variable: "--font-sans",
@@ -21,6 +22,22 @@ export const metadata: Metadata = {
   title: "Wanna Dimsum POS",
   description:
     "Sistem Point of Sale internal Wanna Dimsum — penjualan, dapur, shift kasir, dan inventori dalam satu sistem.",
+  applicationName: "Wanna Dimsum POS",
+  appleWebApp: {
+    capable: true,
+    title: "WD POS",
+    statusBarStyle: "default",
+  },
+  icons: {
+    icon: "/pwa-icon-192.png",
+    apple: "/apple-touch-icon.png",
+  },
+  manifest: "/manifest.webmanifest",
+};
+
+export const viewport: Viewport = {
+  themeColor: "#A91F34",
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -37,7 +54,10 @@ export default function RootLayout({
         jetbrainsMono.variable,
       )}
     >
-      <body className="min-h-full">{children}</body>
+      <body className="min-h-full">
+        {children}
+        <PwaRegister />
+      </body>
     </html>
   );
 }

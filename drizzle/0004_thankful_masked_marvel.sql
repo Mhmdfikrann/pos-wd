@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX `stock_sale_deduction_unq` ON `stock_movements` (`order_id`,`inventory_item_id`,`type`) WHERE "stock_movements"."type" = 'sale_deduction' and "stock_movements"."order_id" is not null;

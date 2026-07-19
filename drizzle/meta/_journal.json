@@ -8,6 +8,41 @@
       "when": 1784449164263,
       "tag": "0000_flaky_blonde_phantom",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1784462714878,
+      "tag": "0001_last_matthew_murdock",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1784466745520,
+      "tag": "0002_nosy_hawkeye",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1784472576710,
+      "tag": "0003_tearful_mesmero",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1784474198459,
+      "tag": "0004_thankful_masked_marvel",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1784475879808,
+      "tag": "0005_married_sunspot",
+      "breakpoints": true
     }
   ]
 }

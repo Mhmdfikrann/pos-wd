@@ -23,6 +23,8 @@ import {
   userOutlets,
   accounts,
 } from "./schema";
+import { seedCatalog } from "./seed-catalog";
+import { seedInventory } from "./seed-inventory";
 
 // ---- Role catalog (PRD 6.1-6.5) ----
 const ROLES = [
@@ -59,8 +61,8 @@ const ROLE_PERMS: Record<string, string[]> = {
   role_owner: PERMISSIONS, // everything
   role_manager: [
     "pos.operate", "shift.open", "shift.close", "payment.accept",
-    "refund.approve", "void.approve", "discount.apply",
-    "kitchen.view", "inventory.view", "inventory.adjust", "report.view",
+    "refund.request", "refund.approve", "void.approve", "discount.apply",
+    "kitchen.view", "kitchen.update", "inventory.view", "inventory.adjust", "report.view",
   ],
   role_kasir: [
     "pos.operate", "shift.open", "shift.close", "payment.accept",
@@ -70,13 +72,13 @@ const ROLE_PERMS: Record<string, string[]> = {
   role_inventory: ["inventory.view", "inventory.adjust", "report.view"],
 };
 
-// ---- Users (one per role). Passwords/PINs are dev defaults — rotate for prod. ----
+// ---- Users (one per role). Passwords are dev defaults — rotate for prod. ----
 const USERS = [
-  { id: "user_owner", name: "Andi Wijaya", email: "owner@wannadimsum.local", username: "owner", password: "owner12345", roleId: "role_owner", pin: "1111" },
-  { id: "user_manager", name: "Rina Hartati", email: "manager@wannadimsum.local", username: "manager", password: "manager12345", roleId: "role_manager", pin: "2222" },
-  { id: "user_kasir", name: "Sinta Dewi", email: "kasir@wannadimsum.local", username: "kasir", password: "kasir12345", roleId: "role_kasir", pin: "3333" },
-  { id: "user_kitchen", name: "Budi Santoso", email: "kitchen@wannadimsum.local", username: "kitchen", password: "kitchen12345", roleId: "role_kitchen", pin: "4444" },
-  { id: "user_inventory", name: "Dewi Lestari", email: "inventory@wannadimsum.local", username: "inventory", password: "inventory12345", roleId: "role_inventory", pin: "5555" },
+  { id: "user_owner", name: "Andi Wijaya", email: "owner@wannadimsum.local", username: "owner", password: "owner12345", roleId: "role_owner" },
+  { id: "user_manager", name: "Rina Hartati", email: "manager@wannadimsum.local", username: "manager", password: "manager12345", roleId: "role_manager" },
+  { id: "user_kasir", name: "Sinta Dewi", email: "kasir@wannadimsum.local", username: "kasir", password: "kasir12345", roleId: "role_kasir" },
+  { id: "user_kitchen", name: "Budi Santoso", email: "kitchen@wannadimsum.local", username: "kitchen", password: "kitchen12345", roleId: "role_kitchen" },
+  { id: "user_inventory", name: "Dewi Lestari", email: "inventory@wannadimsum.local", username: "inventory", password: "inventory12345", roleId: "role_inventory" },
 ];
 
 const OUTLET_ID = "outlet_kemang";
@@ -117,10 +119,15 @@ async function main() {
     })
     .onConflictDoNothing();
 
+  console.log("Seeding catalog (categories + products)...");
+  await seedCatalog(db);
+
+  console.log("Seeding inventory (items + stock + recipes)...");
+  await seedInventory(db, OUTLET_ID);
+
   console.log("Seeding users (drizzle + better-auth scrypt hash)...");
   for (const u of USERS) {
     const passwordHash = await hashPassword(u.password);
-    const pinHash = await hashPassword(u.pin);
 
     await db
       .insert(users)
@@ -131,7 +138,6 @@ async function main() {
         emailVerified: true,
         username: u.username,
         displayUsername: u.username,
-        pinHash,
         roleId: u.roleId,
         active: true,
       })
@@ -158,7 +164,7 @@ async function main() {
 
   console.log("\nSeed complete. Login credentials (dev):");
   for (const u of USERS) {
-    console.log(`  ${u.username.padEnd(10)} / ${u.password.padEnd(16)} (PIN ${u.pin}) — ${u.name}`);
+    console.log(`  ${u.username.padEnd(10)} / ${u.password.padEnd(16)} — ${u.name}`);
   }
   process.exit(0);
 }

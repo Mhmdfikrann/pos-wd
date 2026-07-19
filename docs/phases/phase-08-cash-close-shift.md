@@ -12,9 +12,13 @@
 
 Melengkapi siklus hidup shift: cash in/out, expense, dan **Close Shift** dengan rekonsiliasi kas (expected vs actual vs difference) + manager approval.
 
-## Gap terverifikasi
+## Status implementasi
 
-**Blocker** — Flow 10.4 tidak punya screen sama sekali. Tidak ada expected-cash calc, actual-cash input, difference display, closing notes, atau approval surface. `shifts.closingNote` ada di schema tapi tidak dirender.
+**Selesai di Phase 8.** POS kasir sekarang punya modal **Tutup Shift**: expected-cash dihitung server-side, kas aktual diinput kasir, difference dihitung otomatis, catatan wajib bila ada selisih, dan shift closed memindahkan kasir kembali ke gate buka shift. Modal yang sama juga mencatat cash in/out, expense, dan adjustment.
+
+## Gap terverifikasi awal
+
+**Blocker** — Flow 10.4 sebelumnya tidak punya screen sama sekali. Tidak ada expected-cash calc, actual-cash input, difference display, closing notes, atau approval surface. `shifts.closingNote` ada di schema tapi tidak dirender.
 
 ## Scope
 
@@ -37,17 +41,18 @@ Melengkapi siklus hidup shift: cash in/out, expense, dan **Close Shift** dengan 
 
 ## Acceptance criteria
 
-- [ ] Transaksi baru ditolak setelah shift closed (BR-008).
-- [ ] Cash payment, cash refund, cash in, cash out diperhitungkan dalam expected cash.
-- [ ] Selisih kas **wajib** punya catatan.
-- [ ] Shift yang ditutup **tidak dapat diedit** oleh kasir.
-- [ ] Cash adjustment masuk audit log (BR-011).
+- [x] Transaksi baru ditolak setelah shift closed (BR-008). Checkout tetap re-check `shifts.status = "open"` di transaksi.
+- [x] Cash payment, cash refund, cash in, cash out diperhitungkan dalam expected cash. `computeExpectedCash` juga mengurangi `expense` dan menambahkan `adjustment`.
+- [x] Selisih kas **wajib** punya catatan. `closeShift` menolak `cashDifference !== 0` tanpa note.
+- [x] Shift yang ditutup **tidak dapat diedit** oleh kasir. `recordCashMovement` dan `closeShift` menolak shift closed.
+- [x] Cash adjustment masuk audit log (BR-011). `actionRecordCashMovement(type:"adjustment")` menulis `cash.adjustment`; close shift menulis `shift.close`.
 
 ## Server work
 
 - `recordCashMovement({ shiftId, type, amount, note })` — audit bila adjustment.
-- `closeShift({ shiftId, actualCash, note })` — hitung expected, difference, set status `closed`, `closedAt`; tolak bila kasir & difference≠0 tanpa note; gate approval sesuai ambang.
+- `closeShift({ shiftId, actualCash, note })` — hitung expected, difference, set status `closed`, `closedAt`; tolak bila difference≠0 tanpa note. Ambang approval tetap konservatif (non-zero difference perlu note); approval surface penuh masuk Phase 9.
+- `computeExpectedCash(shiftId)` — opening cash + cash payments + cash in + adjustment − cash out − expense − cash refunds.
 
 ## Definition of Done
 
-Lihat PRD §24. Test: expected-cash math (semua komponen kas), tolak transaksi setelah close, selisih tanpa note ditolak, immutability shift closed.
+Lihat PRD §24. Test ada di `src/lib/cash-data.test.ts` dan regresi checkout closed-shift di `src/lib/order-core.test.ts`: expected-cash math, tolak transaksi setelah close, selisih tanpa note ditolak, dan closed shift immutable.

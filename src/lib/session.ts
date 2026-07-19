@@ -15,7 +15,7 @@ import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { db } from "@/db";
-import { users, userOutlets } from "@/db/schema";
+import { users, userOutlets, rolePermissions, permissions } from "@/db/schema";
 import { ROUTE_ROLES, homeForRole, type RoleId } from "@/lib/rbac";
 
 export interface AppSession {
@@ -89,6 +89,55 @@ export async function requireRoute(route: keyof typeof ROUTE_ROLES): Promise<App
   const allowed = ROUTE_ROLES[route];
   if (!allowed.includes(session.roleId)) {
     redirect(homeForRole(session.roleId));
+  }
+  return session;
+}
+
+// ===== Permission checks (RBAC, FR-002) =====
+//
+// Permissions live in the hand-rolled roles/permissions/rolePermissions tables
+// (AGENTS.md), keyed off the session's roleId. Loaded on demand — a session
+// doesn't carry its permission set, so callers that gate on a permission query
+// for it explicitly. A server action/mutation is the authoritative gate; the UI
+// hiding a button is only cosmetic.
+
+/** All permission keys granted to `roleId` (via rolePermissions). */
+export async function loadPermissions(roleId: string): Promise<string[]> {
+  const rows = await db
+    .select({ key: permissions.key })
+    .from(rolePermissions)
+    .innerJoin(permissions, eq(rolePermissions.permissionId, permissions.id))
+    .where(eq(rolePermissions.roleId, roleId))
+    .all();
+  return rows.map((r) => r.key);
+}
+
+/** Thrown when an authenticated user lacks a required permission. */
+export class PermissionError extends Error {
+  constructor(public readonly permission: string) {
+    super(`Akses ditolak: butuh izin "${permission}".`);
+    this.name = "PermissionError";
+  }
+}
+
+/** True if the current session's role holds `permission`. */
+export async function hasPermission(permission: string): Promise<boolean> {
+  const session = await getAppSession();
+  if (!session) return false;
+  const keys = await loadPermissions(session.roleId);
+  return keys.includes(permission);
+}
+
+/**
+ * Require the current session to hold `permission`, else throw. Use at the top
+ * of every catalog/admin server action — this is the real enforcement point,
+ * not the UI. Returns the session so callers can reuse identity/outlet scope.
+ */
+export async function requirePermission(permission: string): Promise<AppSession> {
+  const session = await requireSession();
+  const keys = await loadPermissions(session.roleId);
+  if (!keys.includes(permission)) {
+    throw new PermissionError(permission);
   }
   return session;
 }

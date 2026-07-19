@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX `shifts_one_open_unq` ON `shifts` (`outlet_id`,`cashier_id`) WHERE "shifts"."status" = 'open';

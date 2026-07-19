@@ -2,18 +2,21 @@
 
 import Image from "next/image";
 import type { CSSProperties } from "react";
+import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { ic } from "./icons";
 import { NAV, containsActive, type NavItem } from "./nav";
 
 interface SidebarProps {
   active: string;
+  collapsed: boolean;
   expanded: Record<string, boolean>;
   onSelect: (label: string) => void;
   onToggle: (label: string) => void;
+  onCollapsedChange: (collapsed: boolean) => void;
 }
 
 /** Port of `renderNav()` — leaf + branch with depth indentation and active highlight. */
-export function Sidebar({ active, expanded, onSelect, onToggle }: SidebarProps) {
+export function Sidebar({ active, collapsed, expanded, onSelect, onToggle, onCollapsedChange }: SidebarProps) {
   const leaf = (label: string, depth: number) => {
     const isActive = active === label;
     const style: CSSProperties = {
@@ -57,6 +60,48 @@ export function Sidebar({ active, expanded, onSelect, onToggle }: SidebarProps) 
           />
         ) : null}
         {label}
+      </button>
+    );
+  };
+
+  const railItem = (item: NavItem) => {
+    const anyActive = containsActive(item, active);
+    const Icon = item.ic ? ic(item.ic, 18, anyActive ? "#A91F34" : "rgba(35,32,31,0.55)", 2) : null;
+    return (
+      <button
+        key={item.label}
+        type="button"
+        aria-label={item.label}
+        title={item.label}
+        onClick={() => {
+          if (item.children) {
+            onCollapsedChange(false);
+            if (!expanded[item.label]) onToggle(item.label);
+            return;
+          }
+          onSelect(item.label);
+        }}
+        style={{
+          width: "42px",
+          height: "42px",
+          border: "none",
+          borderRadius: "11px",
+          background: anyActive ? "#FFF1F2" : "transparent",
+          color: anyActive ? "#A91F34" : "rgba(35,32,31,0.55)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          cursor: "pointer",
+          transition: "background .12s, color .12s",
+        }}
+        onMouseEnter={(e) => {
+          if (!anyActive) e.currentTarget.style.background = "#FAFAFA";
+        }}
+        onMouseLeave={(e) => {
+          if (!anyActive) e.currentTarget.style.background = "transparent";
+        }}
+      >
+        {Icon}
       </button>
     );
   };
@@ -116,19 +161,35 @@ export function Sidebar({ active, expanded, onSelect, onToggle }: SidebarProps) 
   };
 
   return (
-    <div style={{ width: "256px", flexShrink: 0, background: "#fff", borderRight: "1px solid rgba(35,32,31,0.07)", display: "flex", flexDirection: "column" }}>
+    <div
+      className={`wd-owner-sidebar ${collapsed ? "wd-collapsed-sidebar wd-sidebar-collapsed" : "wd-sidebar-expanded"}`}
+      style={{
+        width: collapsed ? "64px" : "256px",
+        flexShrink: 0,
+        background: "#fff",
+        borderRight: "1px solid rgba(35,32,31,0.07)",
+        display: "flex",
+        flexDirection: "column",
+        transition: "width .18s ease",
+      }}
+    >
       <div
         style={{
           height: "62px",
           flexShrink: 0,
           display: "flex",
           alignItems: "center",
+          justifyContent: collapsed ? "center" : "flex-start",
           gap: "10px",
-          padding: "0 18px",
+          padding: collapsed ? "0" : "0 12px 0 18px",
           borderBottom: "1px solid rgba(35,32,31,0.06)",
         }}
       >
-        <div
+        <button
+          type="button"
+          aria-label={collapsed ? "Buka sidebar" : "Tutup sidebar"}
+          aria-expanded={!collapsed}
+          onClick={() => onCollapsedChange(!collapsed)}
           style={{
             width: "38px",
             height: "38px",
@@ -139,20 +200,34 @@ export function Sidebar({ active, expanded, onSelect, onToggle }: SidebarProps) 
             alignItems: "center",
             justifyContent: "center",
             overflow: "hidden",
+            cursor: "pointer",
+            color: "#A91F34",
           }}
+          title={collapsed ? "Buka sidebar" : "Tutup sidebar"}
         >
-          <Image src="/logo-icon.jpg" alt="Wanna Dimsum" width={34} height={34} style={{ objectFit: "contain" }} />
-        </div>
-        <div style={{ lineHeight: 1.05 }}>
-          <div style={{ fontSize: "13.5px", fontWeight: 800 }}>
-            <span style={{ color: "#A91F34" }}>WANNA</span> DIMSUM
+          {collapsed ? (
+            <span className="wd-collapsed-logo-toggle" style={{ display: "grid", placeItems: "center", width: "100%", height: "100%" }}>
+              <Image className="wd-collapsed-logo-img" src="/logo-icon.jpg" alt="" width={34} height={34} style={{ objectFit: "contain" }} />
+              <span className="wd-collapsed-logo-icon" aria-hidden="true" style={{ display: "none", lineHeight: 0 }}>
+                <PanelLeftOpen size={18} strokeWidth={2.2} />
+              </span>
+            </span>
+          ) : (
+            <PanelLeftClose size={18} strokeWidth={2.2} />
+          )}
+        </button>
+        {collapsed ? null : (
+          <div style={{ lineHeight: 1.05, minWidth: 0 }}>
+            <div style={{ fontSize: "13.5px", fontWeight: 800, whiteSpace: "nowrap" }}>
+              <span style={{ color: "#A91F34" }}>WANNA</span> DIMSUM
+            </div>
+            <div style={{ fontSize: "10px", color: "rgba(35,32,31,0.45)", fontWeight: 600, marginTop: "2px" }}>Business Suite</div>
           </div>
-          <div style={{ fontSize: "10px", color: "rgba(35,32,31,0.45)", fontWeight: 600, marginTop: "2px" }}>Business Suite</div>
-        </div>
+        )}
       </div>
-      <div className="wd-scroll" style={{ flex: 1, overflowY: "auto", padding: "10px 10px 20px" }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-          {NAV.map((item) => (item.children ? branch(item, 0) : leaf(item.label, 0)))}
+      <div className="wd-scroll" style={{ flex: 1, overflowY: "auto", padding: collapsed ? "10px 10px 20px" : "10px 10px 20px" }}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: collapsed ? "center" : "stretch", gap: collapsed ? "4px" : "2px" }}>
+          {collapsed ? NAV.map(railItem) : NAV.map((item) => (item.children ? branch(item, 0) : leaf(item.label, 0)))}
         </div>
       </div>
     </div>

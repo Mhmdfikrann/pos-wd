@@ -53,7 +53,7 @@ export function isRoleId(value: string | null | undefined): value is RoleId {
   return value != null && Object.values(ROLE).includes(value as RoleId);
 }
 
-/** Safe home path for a (possibly unknown) role id; falls back to launcher. */
+/** Safe home path for a (possibly unknown) role id; falls back to root auth routing. */
 export function homeForRole(roleId: string | null | undefined): string {
   return isRoleId(roleId) ? ROLE_HOME[roleId] : "/";
 }

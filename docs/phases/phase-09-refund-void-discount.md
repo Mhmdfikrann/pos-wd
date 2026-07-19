@@ -12,7 +12,11 @@
 
 Refund, void, dan diskon manual dengan permission, approval Manager, reversal, dan audit penuh. Sekaligus melahirkan **surface Manager** yang hilang total (gap blocker).
 
-## Gap terverifikasi
+## Status implementasi
+
+**Selesai di Phase 9.** Sistem sekarang punya `approval_requests` sebagai queue Manager untuk refund, void, dan diskon manual. Request dibuat oleh role berizin dan scoped outlet; approval Manager/Owner baru melakukan mutasi finansial dan menulis audit. `/manager` membaca approval inbox + histori transaksi nyata, dan dapat membuat/menyetujui request.
+
+## Gap terverifikasi awal
 
 - **Blocker** — Flow 10.5 Refund tidak punya UI: tidak ada transaction picker, item/amount selection, reason entry, atau approval flow. Tabel `refunds` + `approvedById` ada tapi tak terpakai.
 - **Blocker** — Role Manager (§6.2) tidak punya route/landing. Manager hanya muncul sebagai data contoh + toggle "Wajib persetujuan manager". Fase ini membangun **approvals inbox** Manager.
@@ -38,19 +42,19 @@ Refund, void, dan diskon manual dengan permission, approval Manager, reversal, d
 
 ## Acceptance criteria
 
-- [ ] Refund **tidak melebihi** paid amount yang belum direfund (BR-009).
-- [ ] Refund punya actor, reason, approval.
-- [ ] Histori transaksi asli tetap tersedia (financial record tidak dihapus permanen — BR-005).
-- [ ] Refund, void, diskon manual masuk audit log (BR-011).
-- [ ] Refund/void/discount hanya oleh role dengan permission (server-side, FR-002).
+- [x] Refund **tidak melebihi** paid amount yang belum direfund (BR-009). Pending refund request juga dihitung agar tidak over-request sebelum approval.
+- [x] Refund punya actor, reason, approval. `requestRefund` menyimpan requester/reason; `approveRefund` membuat row `refunds` dengan `actorId` + `approvedById`.
+- [x] Histori transaksi asli tetap tersedia (financial record tidak dihapus permanen — BR-005). Void hanya mengubah `orders.status = "void"`; order items/payment tetap ada.
+- [x] Refund, void, diskon manual masuk audit log (BR-011). Request + approval actions menulis `refund.request`, `refund.approve`, `void.request`, `void.approve`, `discount.request`, `discount.apply`.
+- [x] Refund/void/discount hanya oleh role dengan permission (server-side, FR-002). Server actions gate `refund.request`, `refund.approve`, `void.approve`, dan `discount.apply`; outlet scope dicek sebelum request/approval.
 
 ## Server work
 
-- `requestRefund` / `approveRefund({ refundId, approverId })` — cek belum-melebihi, transaksi DB, audit.
-- `voidOrder` — reversal, audit.
-- `applyManualDiscount` — permission gate, audit.
+- `requestRefund` / `approveRefund({ requestId, approverId })` — cek belum-melebihi, transaksi DB, audit.
+- `requestVoid` / `approveVoid` — reversal status order, histori tetap ada, audit.
+- `requestManualDiscount` / `approveManualDiscount` — manager-approved manual discount, audit.
 - Approval queue query untuk Manager (scoped outlet).
 
 ## Definition of Done
 
-Lihat PRD §24. Test: refund > paid ditolak, refund tanpa approval ditolak, void reversal konsisten, semua tindakan sensitif ada di audit log. IDOR test lintas-outlet untuk approval.
+Lihat PRD §24. Test ada di `src/lib/finance-data.test.ts`: refund > paid ditolak, refund tanpa approval belum membuat row refund, void reversal konsisten, audit intent tersedia untuk tindakan sensitif, dan approval lintas-outlet ditolak.

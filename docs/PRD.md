@@ -206,7 +206,7 @@ Fitur berikut tidak menjadi fokus MVP:
 ### 8.1 Authentication dan Access Control
 
 - Login menggunakan email/username dan password.
-- PIN kasir untuk akses cepat.
+- Auth menggunakan satu halaman login terpadu; user diarahkan ke home sesuai role setelah login.
 - Role-based access control.
 - Pembatasan akses berdasarkan outlet.
 - Aktivasi dan deaktivasi akun.
@@ -492,7 +492,7 @@ Fitur berikut tidak menjadi fokus MVP:
 
 ### 13.3 Security
 
-- Password dan PIN disimpan sebagai hash.
+- Password disimpan sebagai hash.
 - Session menggunakan secure HTTP-only cookie.
 - Authorization dilakukan di server.
 - Input divalidasi.
@@ -1063,7 +1063,7 @@ Catatan status: data tiap halaman bersifat kontekstual per-domain namun masih me
 
 Layar/alur berikut disebut dalam PRD namun belum dibuat mockup-nya dan menjadi kandidat berikutnya:
 
-- Autentikasi: login & PIN kasir (8.1).
+- Autentikasi: login terpadu username/email + password (8.1).
 - Open/Close Shift & rekonsiliasi kas (8.7, Flow 10.1 & 10.4).
 - Refund & Void dengan approval (8.10, Flow 10.5).
 - Manajemen katalog produk & resep (8.3, 8.8 Recipe).

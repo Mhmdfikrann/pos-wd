@@ -1,6 +1,6 @@
 # Phase 4 — Shift Foundation
 
-> Bagian dari rangkaian fase Wanna Dimsum POS. Baca **[AGENTS.md](../../AGENTS.md)** lebih dulu — konvensi, stack, dan aturan "This is NOT the Next.js you know" berlaku penuh. Indeks fase: **[README.md](./README.md)**.
+> **Status:** complete (2026-07-19) · Bagian dari rangkaian fase Wanna Dimsum POS. Baca **[AGENTS.md](../../AGENTS.md)** lebih dulu — konvensi, stack, dan aturan "This is NOT the Next.js you know" berlaku penuh. Indeks fase: **[README.md](./README.md)**.
 
 **PRD refs:** §8.7 (Shift & Cash), §10.1 (Open Shift), FR-009, BR-008.
 **Depends on:** [Phase 2](./phase-02-auth-outlet.md) (butuh user + outlet scope).
@@ -21,33 +21,23 @@ Membangun siklus **buka shift** dan konsep **shift aktif** — fondasi yang meng
 
 ## Acceptance criteria (PRD §10.1)
 
-- [ ] Kasir hanya punya **satu shift aktif per outlet** (enforced server-side, unique-ish guard).
-- [ ] Pembayaran **ditolak** jika tidak ada shift aktif (BR-008 — enforcement penuh diverifikasi di Phase 5).
-- [ ] `openingCash` **tidak boleh negatif**.
-- [ ] Aktivitas open shift dicatat ke `auditLogs`.
+- [x] Kasir hanya punya **satu shift aktif per (outlet, kasir)** (enforced server-side). *Tiga lapis: `assertNoActiveShift` (shift-rules), cek `getActiveShift` (service), dan partial unique index `shifts_one_open_unq ON (outlet_id, cashier_id) WHERE status='open'` (backstop). Diverifikasi runtime: buka ke-2 ditolak `UNIQUE constraint failed`; setelah shift ditutup, buka lagi berhasil (index partial, bukan blanket).*
+- [x] Pembayaran **ditolak** jika tidak ada shift aktif (BR-008). *POS digate: `getActiveShiftForCashier` menentukan apakah `/kasir` menampilkan katalog atau layar buka-shift. Enforcement di sisi checkout diverifikasi penuh di Phase 5.*
+- [x] `openingCash` **tidak boleh negatif**. *`cleanOpeningCash` (shift-rules) — integer rupiah ≥ 0, dipanggil di action dan service; unit-tested.*
+- [x] Aktivitas open shift dicatat ke `auditLogs`. *`actionOpenShift` menulis `writeAudit({ action: "shift.open", actorId, outletId, entityId, detail:{openingCash} })`.*
 
-## Data model
+## What shipped this phase
 
-Sudah ada di `src/db/schema.ts`:
-- `shifts` — `status: open|closed`, `openingCash`, `expectedCash`, `actualCash`, `cashDifference`, `openedAt`, `closedAt`.
-- `cashMovements` — dipakai penuh di Phase 8.
-
-Tidak perlu tabel baru untuk fase ini.
-
-## Server work
-
-- `openShift({ outletId, openingCash })` — server action / route:
-  - Verifikasi user boleh akses `outletId` (`userOutlets`).
-  - Tolak jika sudah ada `shifts` open untuk (outlet, cashier).
-  - Tolak `openingCash < 0`.
-  - Insert `shifts` (status=open), tulis `auditLogs`.
-- `getActiveShift(outletId)` — helper dibaca oleh POS.
-
-## UI work
-
-- Buka shift = **gate** sebelum grid produk kasir bisa dipakai. Jika belum ada shift aktif → tampilkan layar buka shift, bukan katalog.
-- Badge shift di header jadi live (durasi dari `openedAt`).
+- **DB invariant:** partial unique index `shifts_one_open_unq ON (outlet_id, cashier_id) WHERE status = 'open'` (`src/db/schema.ts`), migration `drizzle/0001_last_matthew_murdock.sql`, pushed to dev DB. Closed shifts don't block re-opening — verified at runtime.
+- `src/lib/shift-rules.ts` — pure rules (`cleanOpeningCash`, `assertNoActiveShift`, `formatShiftDuration`), unit-tested (`shift-rules.test.ts`, 10 tests).
+- `src/lib/shift.ts` — data-access layer (`getActiveShift`, `getActiveShiftForCashier`, `openShift`); server-only, auth-free.
+- `src/lib/shift-actions.ts` — `"use server"` `actionOpenShift`/`actionGetActiveShift`: gated on `shift.open`, outlet scope (BR-010), opening-cash validation, `shift.open` audit event, `revalidatePath("/kasir")`.
+- `src/lib/outlets.ts` — `listOutlets` (id→name for the picker).
+- `src/lib/audit.ts` — added `shift.open` (+`shift.close` for Phase 8) to `AuditAction`.
+- `src/app/kasir/OpenShiftScreen.tsx` — the gate: outlet picker + opening-cash entry, shown when no active shift.
+- `src/app/kasir/page.tsx` — now resolves session + active shift; renders the gate or the POS scoped to the open shift's outlet.
+- `src/app/kasir/KasirClient.tsx` — real `outletName`/`cashierName` from the session; the static `Shift · 4j 12m` badge is now live from `openedAt`.
 
 ## Definition of Done
 
-Lihat PRD §24. Minimal: server authz + validasi, unit test invariant "satu shift aktif", audit tercatat, lint + typecheck + build hijau.
+PRD §24 gate: typecheck + lint + build + tests (52) green. Server authz + validation in place; one-active-shift invariant unit-tested *and* verified at the DB layer (open → duplicate rejected → close → re-open succeeds); open-shift audited. Full "payment rejected without active shift" enforcement is Phase 5 (checkout), but the POS is already gated behind an open shift here.

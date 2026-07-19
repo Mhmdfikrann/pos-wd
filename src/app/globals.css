@@ -279,3 +279,178 @@ input {
     @apply font-sans;
   }
 }
+
+.wd-collapsed-sidebar:hover .wd-collapsed-logo-img,
+button:focus-visible .wd-collapsed-logo-toggle .wd-collapsed-logo-img {
+  display: none !important;
+}
+
+.wd-collapsed-sidebar:hover .wd-collapsed-logo-icon,
+button:focus-visible .wd-collapsed-logo-toggle .wd-collapsed-logo-icon {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (max-width: 768px) {
+  html,
+  body {
+    width: 100%;
+    overflow-x: hidden;
+  }
+
+  .wd-role-topbar {
+    height: auto !important;
+    min-height: 62px !important;
+    align-items: center !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    padding: 10px 12px !important;
+  }
+
+  .wd-topbar-search {
+    order: 10 !important;
+    flex: 0 0 100% !important;
+    max-width: none !important;
+    margin-left: 0 !important;
+  }
+
+  .wd-topbar-user,
+  .wd-mobile-hide {
+    display: none !important;
+  }
+
+  .wd-owner-shell,
+  .wd-manager-shell,
+  .wd-kasir-shell,
+  .wd-kitchen-shell,
+  .wd-inventory-shell {
+    height: 100dvh !important;
+    min-width: 0 !important;
+  }
+
+  .wd-owner-main,
+  .wd-manager-shell > div:last-child {
+    min-width: 0 !important;
+  }
+
+  .wd-owner-sidebar,
+  .wd-manager-sidebar {
+    width: 56px !important;
+  }
+
+  .wd-owner-sidebar.wd-sidebar-expanded,
+  .wd-manager-sidebar.wd-sidebar-expanded {
+    position: fixed !important;
+    inset: 0 auto 0 0 !important;
+    z-index: 40 !important;
+    width: min(82vw, 256px) !important;
+    box-shadow: 24px 0 44px -30px rgba(35, 32, 31, 0.45);
+  }
+
+  .wd-owner-page-pad,
+  .wd-owner-dashboard,
+  .wd-manager-content,
+  .wd-inventory-content {
+    padding: 16px 12px 24px !important;
+  }
+
+  .wd-owner-kpi-grid,
+  .wd-manager-overview-grid,
+  .wd-inventory-summary {
+    grid-template-columns: 1fr !important;
+  }
+
+  .wd-owner-split-grid,
+  .wd-owner-board-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .wd-responsive-table {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .wd-responsive-table > div {
+    min-width: 760px;
+  }
+
+  .wd-kasir-shell {
+    overflow: hidden !important;
+  }
+
+  .wd-kasir-body {
+    flex-direction: column !important;
+    overflow-y: auto !important;
+    min-height: 0 !important;
+  }
+
+  .wd-kasir-category {
+    width: 100% !important;
+    max-height: 76px !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    border-right: none !important;
+    border-bottom: 1px solid rgba(45, 32, 34, 0.08) !important;
+    padding: 8px 10px !important;
+  }
+
+  .wd-kasir-category > div:first-child {
+    display: none !important;
+  }
+
+  .wd-kasir-category > div:last-child {
+    min-width: max-content;
+    flex-direction: row !important;
+  }
+
+  .wd-kasir-category button {
+    white-space: nowrap;
+  }
+
+  .wd-kasir-catalog {
+    flex: 0 0 auto !important;
+    min-height: 460px !important;
+  }
+
+  .wd-kasir-products {
+    grid-template-columns: repeat(auto-fill, minmax(142px, 1fr)) !important;
+    gap: 10px !important;
+  }
+
+  .wd-kasir-order {
+    width: 100% !important;
+    border-left: none !important;
+    border-top: 1px solid rgba(45, 32, 34, 0.08) !important;
+    box-shadow: none !important;
+  }
+
+  .wd-kitchen-tabs {
+    order: 10 !important;
+    flex: 0 0 100% !important;
+    overflow-x: auto !important;
+  }
+
+  .wd-kitchen-tabs button {
+    white-space: nowrap;
+  }
+
+  .wd-kitchen-board {
+    grid-template-columns: repeat(3, minmax(280px, 86vw)) !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .wd-inventory-toolbar {
+    align-items: stretch !important;
+  }
+
+  .wd-inventory-toolbar > * {
+    max-width: 100%;
+  }
+
+  .wd-inventory-table > div {
+    min-width: 920px;
+  }
+}

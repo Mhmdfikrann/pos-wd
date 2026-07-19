@@ -13,7 +13,7 @@ export function BoardPage({ label }: { label: string }) {
   return (
     <div>
       <PageHead label={label} actionLabel={null} subtitle="Pantau antrean pesanan dapur secara real-time." />
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "14px" }}>
+      <div className="wd-owner-board-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "14px" }}>
         {cols.map((c, i) => (
           <div key={i} style={{ background: "#fff", border: "1px solid rgba(35,32,31,0.06)", borderRadius: "14px", overflow: "hidden" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "13px 16px", background: c[2] }}>

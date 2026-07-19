@@ -278,7 +278,16 @@ export const shifts = sqliteTable(
       .default(sql`(CURRENT_TIMESTAMP)`),
     closedAt: text("closed_at"),
   },
-  (t) => [index("shifts_outlet_idx").on(t.outletId)],
+  (t) => [
+    index("shifts_outlet_idx").on(t.outletId),
+    // BR-008: at most one OPEN shift per (outlet, cashier). Partial unique index
+    // so historical closed shifts don't collide — a cashier accumulates many
+    // closed shifts over time, but only ever one open. This is the hard DB-level
+    // guard behind the service-layer check in shift.ts.
+    uniqueIndex("shifts_one_open_unq")
+      .on(t.outletId, t.cashierId)
+      .where(sql`${t.status} = 'open'`),
+  ],
 );
 
 export const cashMovements = sqliteTable("cash_movements", {
@@ -395,6 +404,38 @@ export const refunds = sqliteTable("refunds", {
   ...timestamps,
 });
 
+// ===== Manager approvals =====
+export const approvalRequests = sqliteTable(
+  "approval_requests",
+  {
+    id: text("id").primaryKey(),
+    outletId: text("outlet_id")
+      .notNull()
+      .references(() => outlets.id),
+    kind: text("kind", { enum: ["refund", "void", "discount"] }).notNull(),
+    status: text("status", { enum: ["pending", "approved", "rejected"] })
+      .notNull()
+      .default("pending"),
+    targetOrderId: text("target_order_id")
+      .notNull()
+      .references(() => orders.id),
+    amount: integer("amount"),
+    reason: text("reason").notNull(),
+    payload: text("payload"),
+    requestedById: text("requested_by_id")
+      .notNull()
+      .references(() => users.id),
+    approvedById: text("approved_by_id").references(() => users.id),
+    rejectedById: text("rejected_by_id").references(() => users.id),
+    resolvedAt: text("resolved_at"),
+    ...timestamps,
+  },
+  (t) => [
+    index("approval_requests_outlet_status_idx").on(t.outletId, t.status),
+    index("approval_requests_order_idx").on(t.targetOrderId),
+  ],
+);
+
 // ===== Kitchen =====
 export const kitchenTickets = sqliteTable(
   "kitchen_tickets",
@@ -413,11 +454,20 @@ export const kitchenTickets = sqliteTable(
       .notNull()
       .default("new"),
     acceptedAt: text("accepted_at"),
+    acceptedById: text("accepted_by_id").references(() => users.id),
     readyAt: text("ready_at"),
+    readyById: text("ready_by_id").references(() => users.id),
     completedAt: text("completed_at"),
+    completedById: text("completed_by_id").references(() => users.id),
     ...timestamps,
   },
-  (t) => [index("kitchen_tickets_outlet_idx").on(t.outletId)],
+  (t) => [
+    index("kitchen_tickets_outlet_idx").on(t.outletId),
+    // Exactly one kitchen ticket per order (Phase 5 checkout creates it inside
+    // the payment transaction). This unique index is the hard "exactly once"
+    // guard — a retried/racing checkout can't spawn a duplicate ticket.
+    uniqueIndex("kitchen_tickets_order_unq").on(t.orderId),
+  ],
 );
 
 // ===== Inventory =====
@@ -494,7 +544,15 @@ export const stockMovements = sqliteTable(
     actorId: text("actor_id").references(() => users.id),
     ...timestamps,
   },
-  (t) => [index("stock_movements_outlet_idx").on(t.outletId)],
+  (t) => [
+    index("stock_movements_outlet_idx").on(t.outletId),
+    // Phase 7: sale deduction is tied to an order and must be idempotent.
+    // Manual movements can repeat, but a given order may only deduct each
+    // ingredient once.
+    uniqueIndex("stock_sale_deduction_unq")
+      .on(t.orderId, t.inventoryItemId, t.type)
+      .where(sql`${t.type} = 'sale_deduction' and ${t.orderId} is not null`),
+  ],
 );
 
 // ===== Discounts & audit =====

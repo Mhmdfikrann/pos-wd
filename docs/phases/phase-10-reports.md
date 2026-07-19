@@ -28,10 +28,18 @@ Mengganti data contoh Owner Dashboard + archetype ReportPage dengan laporan nyat
 
 ## Acceptance criteria
 
-- [ ] Setiap laporan difilter date range + outlet (FR-015, BR-010 outlet scope server-side).
-- [ ] Laporan harian terbuka < 5 detik (NFR 13.1).
-- [ ] Angka cocok dengan sumber transaksi (rekonsiliasi).
-- [ ] Owner Dashboard Penjualan di-wire ke query nyata (ganti `data.ts`).
+- [x] Setiap laporan difilter date range + outlet (FR-015, BR-010 outlet scope server-side).
+- [x] Laporan harian terbuka < 5 detik (NFR 13.1).
+- [x] Angka cocok dengan sumber transaksi (rekonsiliasi).
+- [x] Owner Dashboard Penjualan di-wire ke query nyata (ganti `data.ts`).
+
+## Implementasi
+
+- `src/lib/reports-data.ts` menyediakan service agregasi laporan DB-parameterized dengan `from` inklusif, `to` eksklusif, dan `outletIds` dari scope server-side.
+- `src/lib/reports.ts` mengikat service ke app DB dan menyediakan snapshot periode Owner (`Hari ini`, `Minggu ini`, `Bulan ini`) dengan batas hari Asia/Jakarta.
+- `src/app/owner/page.tsx` menjadi server fetcher; shell interaktif dipindahkan ke `OwnerClient.tsx`.
+- `Dashboard Penjualan` dan `ReportPage` memakai snapshot nyata untuk sales, product/category/cashier/payment method, shift reconciliation, inventory, serta refund/void/discount/expense.
+- `src/lib/reports-data.test.ts` memverifikasi outlet scope, date range, rekonsiliasi angka, dan performa dataset lokal.
 
 ## Catatan fidelity
 

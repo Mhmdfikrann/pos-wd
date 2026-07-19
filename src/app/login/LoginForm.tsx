@@ -7,10 +7,10 @@
  */
 import { useState } from "react";
 import Image from "next/image";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { KeyRound, LogIn, Loader2 } from "lucide-react";
+import { LogIn, Loader2 } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
+import { safeInternalNextPath } from "@/lib/auth-redirect";
 import { tokens } from "@/lib/tokens";
 
 export function LoginForm({ next }: { next?: string }) {
@@ -20,7 +20,7 @@ export function LoginForm({ next }: { next?: string }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const dest = next && next.startsWith("/") ? next : null;
+  const dest = safeInternalNextPath(next);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -112,15 +112,6 @@ export function LoginForm({ next }: { next?: string }) {
             {busy ? <Loader2 size={16} className="animate-spin" /> : <LogIn size={16} />}
             Masuk
           </button>
-
-          <Link
-            href={dest ? `/login/pin?next=${encodeURIComponent(dest)}` : "/login/pin"}
-            className="mt-3 w-full rounded-xl py-2.5 text-sm font-bold flex items-center justify-center gap-2 border border-black/[0.1] transition-colors hover:bg-black/[0.02]"
-            style={{ color: tokens.ink }}
-          >
-            <KeyRound size={16} />
-            Masuk cepat dengan PIN
-          </Link>
         </form>
 
         <p className="text-center text-xs mt-6" style={{ color: "rgba(45,32,34,0.4)" }}>

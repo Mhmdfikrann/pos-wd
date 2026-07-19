@@ -9,18 +9,16 @@
  * - RBAC stays hand-rolled: roles / permissions / rolePermissions / userOutlets
  *   remain the source of truth. We do NOT use the admin() plugin's string-role
  *   storage. Authorization is enforced server-side keyed off users.roleId.
- * - Username login (username() plugin) suits cashier logins. PIN fast-login is
- *   a separate custom plugin (pinPlugin, src/lib/pin-plugin.ts) wired below.
+ * - Username login (username() plugin) supports the unified login screen.
  * - nextCookies() MUST be last so server actions forward Set-Cookie correctly.
  *
- * Password/PIN are hashed (NFR 13.3). Secrets come from env, never the repo.
+ * Passwords are hashed (NFR 13.3). Secrets come from env, never the repo.
  */
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { username } from "better-auth/plugins";
 import { nextCookies } from "better-auth/next-js";
 import { db, schema } from "@/db";
-import { pinPlugin } from "@/lib/pin-plugin";
 import { env } from "@/lib/env";
 import { writeAudit } from "@/lib/audit";
 
@@ -43,11 +41,10 @@ export const auth = betterAuth({
     enabled: true,
   },
   // Extra columns living on our canonical users table. better-auth must know
-  // about them but must not let clients set them (input:false) or leak the PIN.
+  // about them but must not let clients set them (input:false).
   user: {
     additionalFields: {
       roleId: { type: "string", input: false },
-      pinHash: { type: "string", required: false, input: false, returned: false },
       active: { type: "boolean", defaultValue: true, input: false },
     },
   },
@@ -58,16 +55,17 @@ export const auth = betterAuth({
   databaseHooks: {
     session: {
       create: {
-        // Fires for BOTH password login and the custom PIN endpoint (both mint
-        // a session via internalAdapter.createSession) — the single capture
-        // point for the login audit event (§8.10, FR-001). Best-effort: never
-        // block the login if the audit insert fails.
+        // Single capture point for the login audit event (§8.10, FR-001).
+        // Best-effort: never block the login if the audit insert fails.
         after: async (session, context) => {
-          const isPin = context?.path?.includes("/sign-in/pin");
           await writeAudit({
-            action: isPin ? "auth.login_pin" : "auth.login",
+            action: "auth.login",
             actorId: session.userId,
-            detail: { ip: session.ipAddress ?? null, ua: session.userAgent ?? null },
+            detail: {
+              path: context?.path ?? null,
+              ip: session.ipAddress ?? null,
+              ua: session.userAgent ?? null,
+            },
           });
         },
       },
@@ -75,7 +73,6 @@ export const auth = betterAuth({
   },
   plugins: [
     username(),
-    pinPlugin(), // custom /sign-in/pin endpoint (cashier fast-login)
     nextCookies(), // keep LAST
   ],
 });

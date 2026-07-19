@@ -116,7 +116,7 @@ export function TableCard({ d }: { d: TableData }) {
   const cols = d.columns;
   const tmpl = cols.map((c) => c.w || "1fr").join(" ");
   return (
-    <div style={{ background: "#fff", border: "1px solid rgba(35,32,31,0.06)", borderRadius: "14px", overflow: "hidden" }}>
+    <div className="wd-responsive-table" style={{ background: "#fff", border: "1px solid rgba(35,32,31,0.06)", borderRadius: "14px", overflow: "hidden" }}>
       <div
         style={{
           display: "grid",
@@ -202,7 +202,7 @@ export function TablePage({ label }: { label: string }) {
     <div>
       <PageHead label={label} actionLabel={actionFor(label)} subtitle={d.subtitle} />
       {d.kpis && d.kpis.length ? (
-        <div style={{ display: "grid", gridTemplateColumns: `repeat(${d.kpis.length},1fr)`, gap: "14px", marginBottom: "16px" }}>
+      <div className="wd-owner-kpi-grid" style={{ display: "grid", gridTemplateColumns: `repeat(${d.kpis.length},1fr)`, gap: "14px", marginBottom: "16px" }}>
           {d.kpis.map((k, i) => (
             <MiniStat key={i} label={k[0]} value={k[1]} sub={k[3] || (k[2] ? (k[2] === "up" ? "▲ tren naik" : "▼ tren turun") : null)} tone={k[2]} />
           ))}

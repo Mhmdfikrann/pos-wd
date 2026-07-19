@@ -1,6 +1,7 @@
 import { ic } from "./icons";
 import { MONO } from "./shared";
-import { CHART, PAY, TOP, RECENT } from "./data";
+import { formatRupiah } from "@/lib/format";
+import type { OwnerReportSnapshot } from "@/lib/reports-data";
 
 const CARD = {
   background: "#fff",
@@ -32,21 +33,25 @@ function StockBadge({ tone, stock }: { tone: "ok" | "low" | "out"; stock: number
 
 interface DashboardProps {
   period: string;
+  periods: string[];
+  report: OwnerReportSnapshot;
+  userName: string;
   onPeriod: (p: string) => void;
 }
 
 /** Port of the Dashboard Penjualan page + `renderVals` dashboard bits. */
-export function Dashboard({ period, onPeriod }: DashboardProps) {
-  const periods = ["Hari ini", "Minggu ini", "Bulan ini"];
-  const maxV = Math.max(...CHART.map((c) => c[1]));
+export function Dashboard({ period, periods, report, userName, onPeriod }: DashboardProps) {
+  const chart = report.dailySales;
+  const maxV = Math.max(1, ...chart.map((c) => c.total));
+  const chartTotal = chart.reduce((total, row) => total + row.total, 0);
 
   return (
-    <div style={{ padding: "22px 26px 32px" }}>
+    <div className="wd-owner-dashboard" style={{ padding: "22px 26px 32px" }}>
       {/* Greeting */}
       <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: "16px", marginBottom: "20px", flexWrap: "wrap" }}>
         <div>
-          <div style={{ fontSize: "22px", fontWeight: 800, letterSpacing: "-0.02em" }}>Halo, Andi</div>
-          <div style={{ fontSize: "13.5px", color: "rgba(35,32,31,0.55)", marginTop: "3px" }}>Ringkasan bisnis · Sabtu, 18 Juli 2026</div>
+          <div style={{ fontSize: "22px", fontWeight: 800, letterSpacing: "-0.02em" }}>Halo, {firstName(userName)}</div>
+          <div style={{ fontSize: "13.5px", color: "rgba(35,32,31,0.55)", marginTop: "3px" }}>Ringkasan bisnis · {rangeLabel(report.range.from, report.range.to)}</div>
         </div>
         <div style={{ display: "flex", gap: "8px" }}>
           {periods.map((p) => (
@@ -74,34 +79,34 @@ export function Dashboard({ period, onPeriod }: DashboardProps) {
       </div>
 
       {/* Stat cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "14px" }}>
-        <StatCard iconName="wallet" iconBg="#FFF1F2" iconColor="#A91F34" label="Omzet Hari Ini" value="Rp 4.820.000" delta="▲ 12% vs kemarin" deltaColor="#2E9D64" />
-        <StatCard iconName="receiptSm" iconBg="#FFF7E9" iconColor="#C67A15" label="Transaksi" value="184" delta="▲ 8% vs kemarin" deltaColor="#2E9D64" />
-        <StatCard iconName="cube" iconBg="#EDF7F1" iconColor="#238152" label="Produk Terjual" value="742" delta="▲ 15% vs kemarin" deltaColor="#2E9D64" />
-        <StatCard iconName="customer" iconBg="#EEF2FB" iconColor="#3A5BB0" label="Pelanggan Baru" value="26" delta="▼ 3% vs kemarin" deltaColor="#D64545" />
+      <div className="wd-owner-kpi-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "14px" }}>
+        <StatCard iconName="wallet" iconBg="#FFF1F2" iconColor="#A91F34" label="Omzet Bersih" value={formatRupiah(report.summary.netSales)} delta={`Refund ${formatRupiah(report.summary.refundAmount)}`} deltaColor="#2E9D64" />
+        <StatCard iconName="receiptSm" iconBg="#FFF7E9" iconColor="#C67A15" label="Transaksi" value={String(report.summary.orderCount)} delta={`Void ${formatRupiah(report.summary.voidAmount)}`} deltaColor="#C67A15" />
+        <StatCard iconName="cube" iconBg="#EDF7F1" iconColor="#238152" label="Produk Terjual" value={String(report.summary.productsSold)} delta={`Diskon ${formatRupiah(report.summary.discountAmount)}`} deltaColor="#2E9D64" />
+        <StatCard iconName="customer" iconBg="#EEF2FB" iconColor="#3A5BB0" label="Pengeluaran" value={formatRupiah(report.summary.expenseAmount)} delta="Kas operasional" deltaColor="#3A5BB0" />
       </div>
 
       {/* Chart + payment */}
-      <div style={{ display: "grid", gridTemplateColumns: "1.7fr 1fr", gap: "14px", marginTop: "14px" }}>
+      <div className="wd-owner-split-grid" style={{ display: "grid", gridTemplateColumns: "1.7fr 1fr", gap: "14px", marginTop: "14px" }}>
         <div style={{ ...CARD, padding: "20px 22px" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "18px" }}>
             <div style={{ fontSize: "14.5px", fontWeight: 800 }}>Penjualan 7 Hari Terakhir</div>
             <div style={{ fontFamily: MONO, fontSize: "12px", color: "rgba(35,32,31,0.5)" }}>
-              Total <b style={{ color: "#A91F34" }}>Rp 31,2 jt</b>
+              Total <b style={{ color: "#A91F34" }}>{formatRupiah(chartTotal)}</b>
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "flex-end", gap: "14px", height: "180px", paddingTop: "8px" }}>
-            {CHART.map(([day, v], i) => {
-              const peak = v === maxV;
+            {(chart.length ? chart : [{ label: "-", total: 0, date: "-", orders: 0 }]).map((row, i) => {
+              const peak = row.total === maxV && row.total > 0;
               return (
-                <div key={day} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "8px", height: "100%", justifyContent: "flex-end" }}>
-                  <div style={{ fontFamily: MONO, fontSize: "10.5px", fontWeight: 700, color: peak ? "#A91F34" : "rgba(35,32,31,0.4)" }}>{v.toFixed(1)}jt</div>
+                <div key={`${row.date}-${i}`} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "8px", height: "100%", justifyContent: "flex-end" }}>
+                  <div style={{ fontFamily: MONO, fontSize: "10.5px", fontWeight: 700, color: peak ? "#A91F34" : "rgba(35,32,31,0.4)" }}>{compactMoney(row.total)}</div>
                   <div
                     className="wd-grow"
                     style={{
                       width: "100%",
                       maxWidth: "38px",
-                      height: `${(v / maxV) * 100}%`,
+                      height: `${(row.total / maxV) * 100}%`,
                       minHeight: "6px",
                       borderRadius: "8px 8px 4px 4px",
                       background: peak ? "#A91F34" : "#F3C6CD",
@@ -109,7 +114,7 @@ export function Dashboard({ period, onPeriod }: DashboardProps) {
                       animation: `wd-grow .5s ease ${i * 0.05}s both`,
                     }}
                   />
-                  <div style={{ fontSize: "11px", fontWeight: 600, color: "rgba(35,32,31,0.5)" }}>{day}</div>
+                  <div style={{ fontSize: "11px", fontWeight: 600, color: "rgba(35,32,31,0.5)" }}>{row.label}</div>
                 </div>
               );
             })}
@@ -118,14 +123,14 @@ export function Dashboard({ period, onPeriod }: DashboardProps) {
         <div style={{ ...CARD, padding: "20px 22px" }}>
           <div style={{ fontSize: "14.5px", fontWeight: 800, marginBottom: "18px" }}>Metode Pembayaran</div>
           <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-            {PAY.map(([name, pct, color]) => (
-              <div key={name}>
+            {(report.paymentMethods.length ? report.paymentMethods : [{ method: "Belum ada", percent: 0, color: "#5A4B4D" }]).map((payment) => (
+              <div key={payment.method}>
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12.5px", marginBottom: "6px" }}>
-                  <span style={{ fontWeight: 600 }}>{name}</span>
-                  <span style={{ fontFamily: MONO, fontWeight: 700, color }}>{pct}%</span>
+                  <span style={{ fontWeight: 600 }}>{payment.method}</span>
+                  <span style={{ fontFamily: MONO, fontWeight: 700, color: payment.color }}>{payment.percent}%</span>
                 </div>
                 <div style={{ height: "8px", borderRadius: "999px", background: "#F1EEEA", overflow: "hidden" }}>
-                  <div style={{ width: `${pct}%`, height: "100%", borderRadius: "999px", background: color }} />
+                  <div style={{ width: `${payment.percent}%`, height: "100%", borderRadius: "999px", background: payment.color }} />
                 </div>
               </div>
             ))}
@@ -134,8 +139,8 @@ export function Dashboard({ period, onPeriod }: DashboardProps) {
       </div>
 
       {/* Top products + recent trx */}
-      <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: "14px", marginTop: "14px" }}>
-        <div style={{ ...CARD, overflow: "hidden" }}>
+      <div className="wd-owner-split-grid" style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: "14px", marginTop: "14px" }}>
+        <div className="wd-responsive-table" style={{ ...CARD, overflow: "hidden" }}>
           <div style={{ padding: "16px 22px 12px", fontSize: "14.5px", fontWeight: 800 }}>Produk Terlaris</div>
           <div
             style={{
@@ -155,7 +160,7 @@ export function Dashboard({ period, onPeriod }: DashboardProps) {
             <div style={{ textAlign: "right" }}>Omzet</div>
             <div style={{ textAlign: "right" }}>Stok</div>
           </div>
-          {TOP.map((t, i) => {
+          {(report.topProducts.length ? report.topProducts : []).map((t, i) => {
             const [badgeBg, badgeColor] = badgeTints[i % badgeTints.length];
             return (
               <div
@@ -190,7 +195,7 @@ export function Dashboard({ period, onPeriod }: DashboardProps) {
                   <span style={{ fontWeight: 700 }}>{t.name}</span>
                 </div>
                 <div style={{ textAlign: "right", fontFamily: MONO }}>{t.sold}</div>
-                <div style={{ textAlign: "right", fontFamily: MONO }}>{t.rev}</div>
+                <div style={{ textAlign: "right", fontFamily: MONO }}>{formatRupiah(t.revenue)}</div>
                 <div style={{ textAlign: "right" }}>
                   <StockBadge tone={t.tone} stock={t.stock} />
                 </div>
@@ -205,7 +210,7 @@ export function Dashboard({ period, onPeriod }: DashboardProps) {
               Lihat semua
             </a>
           </div>
-          {RECENT.map((r) => (
+          {report.recentOrders.map((r) => (
             <div key={r.id} style={{ display: "flex", alignItems: "center", gap: "12px", padding: "11px 20px", borderTop: "1px solid rgba(35,32,31,0.05)" }}>
               <div
                 style={{
@@ -220,14 +225,14 @@ export function Dashboard({ period, onPeriod }: DashboardProps) {
                   flexShrink: 0,
                 }}
               >
-                {ic(r.ic, 17, "currentColor", 1.6)}
+                {ic(methodIcon(r.method), 17, "currentColor", 1.6)}
               </div>
               <div style={{ flex: 1, minWidth: 0, lineHeight: 1.2 }}>
-                <div style={{ fontSize: "13px", fontWeight: 700 }}>{r.id}</div>
+                <div style={{ fontSize: "13px", fontWeight: 700 }}>{r.orderNo}</div>
                 <div style={{ fontSize: "11.5px", color: "rgba(35,32,31,0.5)", marginTop: "1px" }}>{r.meta}</div>
               </div>
               <div style={{ textAlign: "right" }}>
-                <div style={{ fontFamily: MONO, fontSize: "13px", fontWeight: 700 }}>{r.amt}</div>
+                <div style={{ fontFamily: MONO, fontSize: "13px", fontWeight: 700 }}>{formatRupiah(r.amount)}</div>
                 <div style={{ fontSize: "10.5px", color: "rgba(35,32,31,0.45)", marginTop: "1px" }}>{r.time}</div>
               </div>
             </div>
@@ -236,6 +241,28 @@ export function Dashboard({ period, onPeriod }: DashboardProps) {
       </div>
     </div>
   );
+}
+
+function firstName(name: string): string {
+  return name.trim().split(/\s+/)[0] || "Owner";
+}
+
+function rangeLabel(from: string, to: string): string {
+  const start = new Date(from);
+  const end = new Date(to);
+  end.setUTCDate(end.getUTCDate() - 1);
+  const fmt = new Intl.DateTimeFormat("id-ID", { day: "2-digit", month: "short", year: "numeric", timeZone: "Asia/Jakarta" });
+  return `${fmt.format(start)} - ${fmt.format(end)}`;
+}
+
+function compactMoney(value: number): string {
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}jt`;
+  if (value >= 1_000) return `${Math.round(value / 1_000)}rb`;
+  return String(value);
+}
+
+function methodIcon(method: string): "wallet" | "receiptSm" {
+  return method === "Tunai" ? "wallet" : "receiptSm";
 }
 
 function StatCard({

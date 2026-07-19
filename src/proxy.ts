@@ -12,6 +12,7 @@
  */
 import { NextResponse, type NextRequest } from "next/server";
 import { getSessionCookie } from "better-auth/cookies";
+import { loginPathWithNext } from "@/lib/auth-redirect";
 
 /** Route prefixes that require a session. Everything else is public. */
 const PROTECTED = ["/owner", "/manager", "/kasir", "/kitchen", "/inventory"];
@@ -28,8 +29,10 @@ export function proxy(request: NextRequest) {
   if (hasCookie) return NextResponse.next();
 
   const url = request.nextUrl.clone();
-  url.pathname = "/login";
-  url.searchParams.set("next", pathname);
+  const loginPath = loginPathWithNext(pathname);
+  const [loginRoute, query = ""] = loginPath.split("?");
+  url.pathname = loginRoute;
+  url.search = query ? `?${query}` : "";
   return NextResponse.redirect(url);
 }
 

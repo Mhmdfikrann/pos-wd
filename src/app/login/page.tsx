@@ -4,7 +4,7 @@
  */
 import { redirect } from "next/navigation";
 import { getAppSession } from "@/lib/session";
-import { homeForRole } from "@/lib/rbac";
+import { resolvePostLoginPath } from "@/lib/auth-redirect";
 import { LoginForm } from "./LoginForm";
 
 export default async function LoginPage({
@@ -13,8 +13,9 @@ export default async function LoginPage({
   searchParams: Promise<{ next?: string }>;
 }) {
   const session = await getAppSession();
-  if (session) redirect(homeForRole(session.roleId));
-
   const { next } = await searchParams;
+
+  if (session) redirect(resolvePostLoginPath(session.roleId, next));
+
   return <LoginForm next={next} />;
 }

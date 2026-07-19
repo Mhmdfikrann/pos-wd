@@ -12,9 +12,13 @@
 
 Menghubungkan `/inventory` ke `inventoryItems` / `outletStock` / `stockMovements` nyata, dan menerapkan pengurangan stok otomatis berbasis resep saat penjualan (FR-013).
 
+## Status implementasi
+
+**Selesai di Phase 7.** `/inventory` sekarang DB-backed, stock adjustment lewat server action + audit, resep sudah di-seed, dan checkout memanggil `sale_deduction` di transaksi pembayaran yang sama.
+
 ## Kondisi frontend saat ini (terverifikasi)
 
-`/inventory` lengkap: 4 kartu ringkasan (Total SKU, Nilai Persediaan, Perlu Restock, Hampir Kedaluwarsa), filter kategori + status, tabel stok, modal penyesuaian (Masuk/Keluar/Opname) dengan preview "stok sekarang → hasil". `INITIAL_ITEMS` = 15 item mock. **Catatan:** Stok Opname resmi Post-MVP (PRD §9) tapi UI-nya sudah ada untuk validasi alur.
+`/inventory` lengkap: 4 kartu ringkasan (Total SKU, Nilai Persediaan, Perlu Restock, Hampir Kedaluwarsa), filter kategori + status, tabel stok, modal penyesuaian (Masuk/Keluar/Opname) dengan preview "stok sekarang → hasil". Data awal berasal dari `inventoryItems` + `outletStock` seeded dari 15 item mock. **Catatan:** Stok Opname resmi Post-MVP (PRD §9) tapi UI-nya sudah ada untuk validasi alur.
 
 ## Scope
 
@@ -28,21 +32,21 @@ Menghubungkan `/inventory` ke `inventoryItems` / `outletStock` / `stockMovements
 
 ## Acceptance criteria
 
-- [ ] Setiap perubahan stok tercatat di `stockMovements` (BR-006).
-- [ ] Deduction otomatis dari resep saat payment sukses, posting **tepat sekali** (idempotent, NFR §13.2).
-- [ ] Negative stock ditolak (BR-014).
-- [ ] Manual adjustment masuk audit log (BR-011).
-- [ ] Stok per-outlet terisolasi (BR-010).
+- [x] Setiap perubahan stok tercatat di `stockMovements` (BR-006). Manual adjustment dan `sale_deduction` sama-sama melewati ledger.
+- [x] Deduction otomatis dari resep saat payment sukses, posting **tepat sekali** (idempotent, NFR §13.2). Guard service + partial unique index `stock_sale_deduction_unq`.
+- [x] Negative stock ditolak (BR-014). Checkout rollback penuh jika bahan resep tidak cukup.
+- [x] Manual adjustment masuk audit log (BR-011) via `writeAudit({ action: "stock.adjustment" })`.
+- [x] Stok per-outlet terisolasi (BR-010) via `requireRoute`, `assertOutletAccess`, dan query scoped `outletIds`.
 
 ## Data model
 
-`inventoryItems`, `outletStock` (unique outlet+item), `recipes` (versioned + variantId), `recipeItems`, `stockMovements` (ledger dgn `orderId`, `actorId`, tipe enum). Semua sudah ada.
+`inventoryItems`, `outletStock` (unique outlet+item), `recipes` (versioned + variantId), `recipeItems`, `stockMovements` (ledger dgn `orderId`, `actorId`, tipe enum). Phase 7 menambahkan partial unique index untuk idempotency `sale_deduction`.
 
 ## Server work
 
-- `adjustStock({ outletId, itemId, type, quantity, note })` — tulis ledger + update `outletStock`, audit bila adjustment.
-- `deductForOrder(orderId)` — resolve resep tiap order item, kurangi stok, ledger `sale_deduction`, idempotent per order (dipanggil dalam transaksi checkout Phase 5).
-- `listStock({ outletId, category?, status? })`.
+- `adjustStock({ outletId, itemId, type, quantity, note })` — tulis ledger + update `outletStock`, audit via server action.
+- `deductStockForOrder(orderId)` — resolve resep tiap order item, kurangi stok, ledger `sale_deduction`, idempotent per order (dipanggil dalam transaksi checkout Phase 5).
+- `listStock({ outletIds })`.
 
 ## Catatan integrasi Phase 5
 
@@ -50,4 +54,4 @@ Deduction dipanggil di dalam transaksi checkout (BR-007). Jika payment gagal →
 
 ## Definition of Done
 
-Lihat PRD §24. Test: double-checkout tidak double-deduct, negative stock ditolak, cross-outlet isolation, adjustment teraudit.
+Lihat PRD §24. Test ada di `src/lib/inventory-data.test.ts`, `src/lib/order-core.test.ts`, dan `src/db/seed-inventory.test.ts`: double-checkout tidak double-deduct, negative stock ditolak, outlet scope terjaga, seed recipe konsisten, dan manual adjustment melewati ledger + audit action.

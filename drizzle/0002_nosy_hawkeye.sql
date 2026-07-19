@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX `kitchen_tickets_order_unq` ON `kitchen_tickets` (`order_id`);
