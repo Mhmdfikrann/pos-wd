@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Menu } from "lucide-react";
 import { ic } from "@/components/owner/icons";
 import { Sidebar } from "@/components/owner/Sidebar";
 import { Dashboard } from "@/components/owner/Dashboard";
@@ -47,6 +48,7 @@ export function OwnerClient({ userName, reports }: OwnerClientProps) {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({ Dashboard: true });
   const [period, setPeriod] = useState<OwnerReportPeriod>("Hari ini");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   const toggle = (label: string) => setExpanded((s) => ({ ...s, [label]: !s[label] }));
 
@@ -63,11 +65,19 @@ export function OwnerClient({ userName, reports }: OwnerClientProps) {
     <div className="wd-owner-shell" style={{ height: "100vh", display: "flex", background: "#F5F6F8", color: "#23201F", overflow: "hidden" }}>
       <Sidebar
         active={active}
-        collapsed={sidebarCollapsed}
+        collapsed={mobileSidebarOpen ? false : sidebarCollapsed}
+        mobileOpen={mobileSidebarOpen}
         expanded={expanded}
         onSelect={setActive}
         onToggle={toggle}
         onCollapsedChange={setSidebarCollapsed}
+        onMobileClose={() => setMobileSidebarOpen(false)}
+      />
+      <button
+        type="button"
+        className={`wd-mobile-sidebar-backdrop ${mobileSidebarOpen ? "wd-mobile-sidebar-backdrop-open" : ""}`}
+        aria-label="Tutup sidebar"
+        onClick={() => setMobileSidebarOpen(false)}
       />
 
       {/* MAIN */}
@@ -86,6 +96,15 @@ export function OwnerClient({ userName, reports }: OwnerClientProps) {
             borderBottom: "1px solid rgba(35,32,31,0.06)",
           }}
         >
+          <button
+            type="button"
+            className="wd-mobile-sidebar-trigger"
+            aria-label="Buka sidebar"
+            aria-expanded={mobileSidebarOpen}
+            onClick={() => setMobileSidebarOpen(true)}
+          >
+            <Menu size={20} strokeWidth={2.4} />
+          </button>
           <div style={{ flex: 1 }} />
           <span
             style={{

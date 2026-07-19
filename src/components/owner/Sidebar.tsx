@@ -9,14 +9,16 @@ import { NAV, containsActive, type NavItem } from "./nav";
 interface SidebarProps {
   active: string;
   collapsed: boolean;
+  mobileOpen?: boolean;
   expanded: Record<string, boolean>;
   onSelect: (label: string) => void;
   onToggle: (label: string) => void;
   onCollapsedChange: (collapsed: boolean) => void;
+  onMobileClose?: () => void;
 }
 
 /** Port of `renderNav()` — leaf + branch with depth indentation and active highlight. */
-export function Sidebar({ active, collapsed, expanded, onSelect, onToggle, onCollapsedChange }: SidebarProps) {
+export function Sidebar({ active, collapsed, mobileOpen = false, expanded, onSelect, onToggle, onCollapsedChange, onMobileClose }: SidebarProps) {
   const leaf = (label: string, depth: number) => {
     const isActive = active === label;
     const style: CSSProperties = {
@@ -39,7 +41,10 @@ export function Sidebar({ active, collapsed, expanded, onSelect, onToggle, onCol
     return (
       <button
         key={label}
-        onClick={() => onSelect(label)}
+        onClick={() => {
+          onSelect(label);
+          onMobileClose?.();
+        }}
         style={style}
         onMouseEnter={(e) => {
           if (!isActive) e.currentTarget.style.background = "#FAFAFA";
@@ -162,7 +167,7 @@ export function Sidebar({ active, collapsed, expanded, onSelect, onToggle, onCol
 
   return (
     <div
-      className={`wd-owner-sidebar ${collapsed ? "wd-collapsed-sidebar wd-sidebar-collapsed" : "wd-sidebar-expanded"}`}
+      className={`wd-owner-sidebar ${collapsed ? "wd-collapsed-sidebar wd-sidebar-collapsed" : "wd-sidebar-expanded"} ${mobileOpen ? "wd-mobile-sidebar-open" : ""}`}
       style={{
         width: collapsed ? "64px" : "256px",
         flexShrink: 0,

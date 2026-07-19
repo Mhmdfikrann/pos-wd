@@ -21,6 +21,7 @@ import {
   Boxes,
   Check,
   Clock,
+  Menu,
   PanelLeftClose,
   PanelLeftOpen,
 } from "lucide-react";
@@ -59,13 +60,17 @@ const MANAGER_NAV: Array<{ id: ManagerSection; label: string; icon: LucideIcon; 
 function ManagerSidebar({
   active,
   collapsed,
+  mobileOpen,
   onActive,
   onCollapsedChange,
+  onMobileClose,
 }: {
   active: ManagerSection;
   collapsed: boolean;
+  mobileOpen: boolean;
   onActive: (section: ManagerSection) => void;
   onCollapsedChange: (collapsed: boolean) => void;
+  onMobileClose: () => void;
 }) {
   const navButton = (item: (typeof MANAGER_NAV)[number]) => {
     const Icon = item.icon;
@@ -97,6 +102,7 @@ function ManagerSidebar({
         title={item.label}
         onClick={() => {
           onActive(item.id);
+          onMobileClose();
           document.getElementById(item.target)?.scrollIntoView({ behavior: "smooth", block: "start" });
         }}
         style={style}
@@ -115,7 +121,7 @@ function ManagerSidebar({
 
   return (
     <aside
-      className={`wd-manager-sidebar ${collapsed ? "wd-collapsed-sidebar wd-sidebar-collapsed" : "wd-sidebar-expanded"}`}
+      className={`wd-manager-sidebar ${collapsed ? "wd-collapsed-sidebar wd-sidebar-collapsed" : "wd-sidebar-expanded"} ${mobileOpen ? "wd-mobile-sidebar-open" : ""}`}
       style={{
         width: collapsed ? 64 : 228,
         flexShrink: 0,
@@ -211,6 +217,7 @@ export function ManagerShell({
   const [requestBusyId, setRequestBusyId] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [activeSection, setActiveSection] = useState<ManagerSection>("overview");
 
   const approve = async (request: ApprovalRequestView) => {
@@ -265,9 +272,17 @@ export function ManagerShell({
     <div className="wd-manager-shell" style={{ height: "100vh", display: "flex", overflow: "hidden", background: tokens.suite, color: tokens.suiteInk }}>
       <ManagerSidebar
         active={activeSection}
-        collapsed={sidebarCollapsed}
+        collapsed={mobileSidebarOpen ? false : sidebarCollapsed}
+        mobileOpen={mobileSidebarOpen}
         onActive={setActiveSection}
         onCollapsedChange={setSidebarCollapsed}
+        onMobileClose={() => setMobileSidebarOpen(false)}
+      />
+      <button
+        type="button"
+        className={`wd-mobile-sidebar-backdrop ${mobileSidebarOpen ? "wd-mobile-sidebar-backdrop-open" : ""}`}
+        aria-label="Tutup sidebar"
+        onClick={() => setMobileSidebarOpen(false)}
       />
       <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
         {/* Top bar */}
@@ -284,6 +299,15 @@ export function ManagerShell({
             borderBottom: "1px solid rgba(35,32,31,0.06)",
           }}
         >
+          <button
+            type="button"
+            className="wd-mobile-sidebar-trigger"
+            aria-label="Buka sidebar"
+            aria-expanded={mobileSidebarOpen}
+            onClick={() => setMobileSidebarOpen(true)}
+          >
+            <Menu size={20} strokeWidth={2.4} />
+          </button>
           <div style={{ flex: 1 }} />
           <span
             style={{
