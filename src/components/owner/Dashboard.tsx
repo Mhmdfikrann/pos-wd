@@ -1,0 +1,270 @@
+import { ic } from "./icons";
+import { MONO } from "./shared";
+import { CHART, PAY, TOP, RECENT } from "./data";
+
+const CARD = {
+  background: "#fff",
+  border: "1px solid rgba(35,32,31,0.06)",
+  borderRadius: "14px",
+} as const;
+
+const badgeTints: Array<[string, string]> = [
+  ["#FFF1F2", "#A91F34"],
+  ["#FFF7E9", "#C67A15"],
+  ["#EDF7F1", "#238152"],
+  ["#EEF2FB", "#3A5BB0"],
+  ["#F1EEEA", "#5A4B4D"],
+];
+
+function StockBadge({ tone, stock }: { tone: "ok" | "low" | "out"; stock: number }) {
+  const map: Record<string, [string, string]> = {
+    ok: ["#EDF7F1", "#238152"],
+    low: ["#FFF7E9", "#C67A15"],
+    out: ["#F1EEEA", "#5A4B4D"],
+  };
+  const [bg, col] = map[tone];
+  return (
+    <span style={{ fontSize: "11px", fontWeight: 700, padding: "3px 9px", borderRadius: "7px", background: bg, color: col, fontFamily: MONO }}>
+      {stock === 999 ? "∞" : String(stock)}
+    </span>
+  );
+}
+
+interface DashboardProps {
+  period: string;
+  onPeriod: (p: string) => void;
+}
+
+/** Port of the Dashboard Penjualan page + `renderVals` dashboard bits. */
+export function Dashboard({ period, onPeriod }: DashboardProps) {
+  const periods = ["Hari ini", "Minggu ini", "Bulan ini"];
+  const maxV = Math.max(...CHART.map((c) => c[1]));
+
+  return (
+    <div style={{ padding: "22px 26px 32px" }}>
+      {/* Greeting */}
+      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: "16px", marginBottom: "20px", flexWrap: "wrap" }}>
+        <div>
+          <div style={{ fontSize: "22px", fontWeight: 800, letterSpacing: "-0.02em" }}>Halo, Andi</div>
+          <div style={{ fontSize: "13.5px", color: "rgba(35,32,31,0.55)", marginTop: "3px" }}>Ringkasan bisnis · Sabtu, 18 Juli 2026</div>
+        </div>
+        <div style={{ display: "flex", gap: "8px" }}>
+          {periods.map((p) => (
+            <button
+              key={p}
+              onClick={() => onPeriod(p)}
+              style={{
+                height: "38px",
+                padding: "0 16px",
+                borderRadius: "10px",
+                fontFamily: "inherit",
+                fontSize: "12.5px",
+                fontWeight: 700,
+                cursor: "pointer",
+                transition: "all .12s",
+                border: period === p ? "none" : "1px solid rgba(35,32,31,0.12)",
+                background: period === p ? "#23201F" : "#fff",
+                color: period === p ? "#fff" : "rgba(35,32,31,0.6)",
+              }}
+            >
+              {p}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Stat cards */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "14px" }}>
+        <StatCard iconName="wallet" iconBg="#FFF1F2" iconColor="#A91F34" label="Omzet Hari Ini" value="Rp 4.820.000" delta="▲ 12% vs kemarin" deltaColor="#2E9D64" />
+        <StatCard iconName="receiptSm" iconBg="#FFF7E9" iconColor="#C67A15" label="Transaksi" value="184" delta="▲ 8% vs kemarin" deltaColor="#2E9D64" />
+        <StatCard iconName="cube" iconBg="#EDF7F1" iconColor="#238152" label="Produk Terjual" value="742" delta="▲ 15% vs kemarin" deltaColor="#2E9D64" />
+        <StatCard iconName="customer" iconBg="#EEF2FB" iconColor="#3A5BB0" label="Pelanggan Baru" value="26" delta="▼ 3% vs kemarin" deltaColor="#D64545" />
+      </div>
+
+      {/* Chart + payment */}
+      <div style={{ display: "grid", gridTemplateColumns: "1.7fr 1fr", gap: "14px", marginTop: "14px" }}>
+        <div style={{ ...CARD, padding: "20px 22px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "18px" }}>
+            <div style={{ fontSize: "14.5px", fontWeight: 800 }}>Penjualan 7 Hari Terakhir</div>
+            <div style={{ fontFamily: MONO, fontSize: "12px", color: "rgba(35,32,31,0.5)" }}>
+              Total <b style={{ color: "#A91F34" }}>Rp 31,2 jt</b>
+            </div>
+          </div>
+          <div style={{ display: "flex", alignItems: "flex-end", gap: "14px", height: "180px", paddingTop: "8px" }}>
+            {CHART.map(([day, v], i) => {
+              const peak = v === maxV;
+              return (
+                <div key={day} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "8px", height: "100%", justifyContent: "flex-end" }}>
+                  <div style={{ fontFamily: MONO, fontSize: "10.5px", fontWeight: 700, color: peak ? "#A91F34" : "rgba(35,32,31,0.4)" }}>{v.toFixed(1)}jt</div>
+                  <div
+                    className="wd-grow"
+                    style={{
+                      width: "100%",
+                      maxWidth: "38px",
+                      height: `${(v / maxV) * 100}%`,
+                      minHeight: "6px",
+                      borderRadius: "8px 8px 4px 4px",
+                      background: peak ? "#A91F34" : "#F3C6CD",
+                      transformOrigin: "bottom",
+                      animation: `wd-grow .5s ease ${i * 0.05}s both`,
+                    }}
+                  />
+                  <div style={{ fontSize: "11px", fontWeight: 600, color: "rgba(35,32,31,0.5)" }}>{day}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        <div style={{ ...CARD, padding: "20px 22px" }}>
+          <div style={{ fontSize: "14.5px", fontWeight: 800, marginBottom: "18px" }}>Metode Pembayaran</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            {PAY.map(([name, pct, color]) => (
+              <div key={name}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12.5px", marginBottom: "6px" }}>
+                  <span style={{ fontWeight: 600 }}>{name}</span>
+                  <span style={{ fontFamily: MONO, fontWeight: 700, color }}>{pct}%</span>
+                </div>
+                <div style={{ height: "8px", borderRadius: "999px", background: "#F1EEEA", overflow: "hidden" }}>
+                  <div style={{ width: `${pct}%`, height: "100%", borderRadius: "999px", background: color }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Top products + recent trx */}
+      <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: "14px", marginTop: "14px" }}>
+        <div style={{ ...CARD, overflow: "hidden" }}>
+          <div style={{ padding: "16px 22px 12px", fontSize: "14.5px", fontWeight: 800 }}>Produk Terlaris</div>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "2fr 1fr 1fr 0.8fr",
+              padding: "9px 22px",
+              background: "#FAFAFA",
+              fontSize: "11px",
+              fontWeight: 700,
+              letterSpacing: "0.04em",
+              textTransform: "uppercase",
+              color: "rgba(35,32,31,0.42)",
+            }}
+          >
+            <div>Produk</div>
+            <div style={{ textAlign: "right" }}>Terjual</div>
+            <div style={{ textAlign: "right" }}>Omzet</div>
+            <div style={{ textAlign: "right" }}>Stok</div>
+          </div>
+          {TOP.map((t, i) => {
+            const [badgeBg, badgeColor] = badgeTints[i % badgeTints.length];
+            return (
+              <div
+                key={t.name}
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "2fr 1fr 1fr 0.8fr",
+                  padding: "12px 22px",
+                  fontSize: "13.5px",
+                  borderTop: "1px solid rgba(35,32,31,0.05)",
+                  alignItems: "center",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "11px" }}>
+                  <div
+                    style={{
+                      width: "30px",
+                      height: "30px",
+                      borderRadius: "8px",
+                      background: badgeBg,
+                      color: badgeColor,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: "13px",
+                      fontWeight: 800,
+                      flexShrink: 0,
+                    }}
+                  >
+                    {t.name.charAt(0)}
+                  </div>
+                  <span style={{ fontWeight: 700 }}>{t.name}</span>
+                </div>
+                <div style={{ textAlign: "right", fontFamily: MONO }}>{t.sold}</div>
+                <div style={{ textAlign: "right", fontFamily: MONO }}>{t.rev}</div>
+                <div style={{ textAlign: "right" }}>
+                  <StockBadge tone={t.tone} stock={t.stock} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <div style={{ ...CARD, overflow: "hidden" }}>
+          <div style={{ padding: "16px 20px 12px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <span style={{ fontSize: "14.5px", fontWeight: 800 }}>Transaksi Terakhir</span>
+            <a href="#" style={{ fontSize: "12px", fontWeight: 700, color: "#A91F34" }}>
+              Lihat semua
+            </a>
+          </div>
+          {RECENT.map((r) => (
+            <div key={r.id} style={{ display: "flex", alignItems: "center", gap: "12px", padding: "11px 20px", borderTop: "1px solid rgba(35,32,31,0.05)" }}>
+              <div
+                style={{
+                  width: "34px",
+                  height: "34px",
+                  borderRadius: "9px",
+                  background: "#F5F6F8",
+                  color: "rgba(35,32,31,0.55)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}
+              >
+                {ic(r.ic, 17, "currentColor", 1.6)}
+              </div>
+              <div style={{ flex: 1, minWidth: 0, lineHeight: 1.2 }}>
+                <div style={{ fontSize: "13px", fontWeight: 700 }}>{r.id}</div>
+                <div style={{ fontSize: "11.5px", color: "rgba(35,32,31,0.5)", marginTop: "1px" }}>{r.meta}</div>
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontFamily: MONO, fontSize: "13px", fontWeight: 700 }}>{r.amt}</div>
+                <div style={{ fontSize: "10.5px", color: "rgba(35,32,31,0.45)", marginTop: "1px" }}>{r.time}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StatCard({
+  iconName,
+  iconBg,
+  iconColor,
+  label,
+  value,
+  delta,
+  deltaColor,
+}: {
+  iconName: "wallet" | "receiptSm" | "cube" | "customer";
+  iconBg: string;
+  iconColor: string;
+  label: string;
+  value: string;
+  delta: string;
+  deltaColor: string;
+}) {
+  return (
+    <div style={{ ...CARD, padding: "18px 20px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+        <div style={{ width: "34px", height: "34px", borderRadius: "9px", background: iconBg, color: iconColor, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          {ic(iconName, 17, "currentColor")}
+        </div>
+        <span style={{ fontSize: "12px", fontWeight: 700, color: "rgba(35,32,31,0.5)" }}>{label}</span>
+      </div>
+      <div style={{ fontFamily: MONO, fontSize: "23px", fontWeight: 700, marginTop: "12px" }}>{value}</div>
+      <div style={{ fontSize: "12px", fontWeight: 700, color: deltaColor, marginTop: "5px" }}>{delta}</div>
+    </div>
+  );
+}

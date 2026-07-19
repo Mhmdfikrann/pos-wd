@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body { background: #FFF9F2; color: #2D2022; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; -webkit-font-smoothing: antialiased; letter-spacing: -0.006em; overflow: hidden; }
+  a { color: #A91F34; text-decoration: none; }
+  a:hover { color: #7F1628; }
+  input { font-family: inherit; }
+  ::selection { background: #FFD84D; color: #2D2022; }
+  @keyframes wd-blink { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+  @keyframes wd-fade { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes wd-slideup { from { transform: translateY(14px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  .wd-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+  .wd-scroll::-webkit-scrollbar-thumb { background: rgba(45,32,34,0.16); border-radius: 8px; }
+  .wd-scroll::-webkit-scrollbar-track { background: transparent; }
+</style>
+</helmet>
+
+<div data-screen-label="Inventory" style="height:100vh;display:flex;flex-direction:column;background:#FFF9F2;">
+
+  <!-- ===== HEADER ===== -->
+  <div style="height:64px;flex-shrink:0;display:flex;align-items:center;gap:16px;padding:0 20px;background:#fff;border-bottom:1px solid rgba(45,32,34,0.08);">
+    <div style="display:flex;align-items:center;gap:11px;flex-shrink:0;">
+      <div style="width:40px;height:40px;border-radius:9px;background:#fff;border:1px solid rgba(45,32,34,0.08);display:flex;align-items:center;justify-content:center;overflow:hidden;">
+        <img src="assets/logo-icon.jpg" alt="Wanna Dimsum" style="width:36px;height:36px;object-fit:contain;" />
+      </div>
+      <div style="line-height:1.05;">
+        <div style="font-size:13.5px;font-weight:800;"><span style="color:#A91F34;">WANNA</span> DIMSUM</div>
+        <div style="font-size:10.5px;color:rgba(45,32,34,0.5);font-weight:600;margin-top:2px;">Inventori · {{ outletName }}</div>
+      </div>
+    </div>
+
+    <div style="position:relative;flex:1;max-width:420px;margin-left:6px;">
+      <span style="position:absolute;left:15px;top:50%;transform:translateY(-50%);display:flex;color:rgba(45,32,34,0.4);">{{ icSearch }}</span>
+      <input oninput="{{ onSearch }}" placeholder="Cari bahan, SKU, atau kategori…" style="width:100%;height:44px;border:1.5px solid rgba(45,32,34,0.12);border-radius:10px;padding:0 14px 0 42px;font-size:14px;color:#2D2022;background:#FFF9F2;outline:none;" />
+    </div>
+
+    <div style="flex:1;"></div>
+
+    <span style="display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;padding:8px 13px;border-radius:9px;background:#E4F4EC;color:#238152;"><span style="width:8px;height:8px;border-radius:50%;background:#2E9D64;animation:wd-blink 1.6s infinite;"></span>Tersinkron</span>
+    <div style="width:1px;height:28px;background:rgba(45,32,34,0.1);"></div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div style="width:38px;height:38px;border-radius:50%;background:#EFEAEA;color:#5A4B4D;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;">{{ staffInitial }}</div>
+      <div style="line-height:1.15;">
+        <div style="font-size:12.5px;font-weight:700;">{{ staffName }}</div>
+        <div style="font-size:10.5px;color:rgba(45,32,34,0.5);">Staf Inventori</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== CONTENT ===== -->
+  <div class="wd-scroll" style="flex:1;overflow-y:auto;padding:22px 26px 32px;">
+
+    <!-- Summary cards -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;">
+      <div style="background:#fff;border:1px solid rgba(45,32,34,0.07);border-radius:14px;padding:18px 20px;">
+        <div style="display:flex;align-items:center;gap:10px;"><div style="width:34px;height:34px;border-radius:9px;background:#EEF2FB;color:#3A5BB0;display:flex;align-items:center;justify-content:center;">{{ icBox }}</div><span style="font-size:12px;font-weight:700;color:rgba(45,32,34,0.5);">Total SKU</span></div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:23px;font-weight:700;margin-top:12px;">{{ totalSku }}</div>
+        <div style="font-size:12px;font-weight:600;color:rgba(45,32,34,0.5);margin-top:5px;">item aktif di outlet ini</div>
+      </div>
+      <div style="background:#fff;border:1px solid rgba(45,32,34,0.07);border-radius:14px;padding:18px 20px;">
+        <div style="display:flex;align-items:center;gap:10px;"><div style="width:34px;height:34px;border-radius:9px;background:#EDF7F1;color:#238152;display:flex;align-items:center;justify-content:center;">{{ icValue }}</div><span style="font-size:12px;font-weight:700;color:rgba(45,32,34,0.5);">Nilai Persediaan</span></div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:23px;font-weight:700;margin-top:12px;">{{ totalValue }}</div>
+        <div style="font-size:12px;font-weight:600;color:rgba(45,32,34,0.5);margin-top:5px;">nilai stok saat ini</div>
+      </div>
+      <div style="background:#fff;border:1px solid rgba(45,32,34,0.07);border-radius:14px;padding:18px 20px;">
+        <div style="display:flex;align-items:center;gap:10px;"><div style="width:34px;height:34px;border-radius:9px;background:#FCEEDB;color:#C67A15;display:flex;align-items:center;justify-content:center;">{{ icAlert }}</div><span style="font-size:12px;font-weight:700;color:rgba(45,32,34,0.5);">Perlu Restock</span></div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:23px;font-weight:700;margin-top:12px;color:#C67A15;">{{ restockCount }}</div>
+        <div style="font-size:12px;font-weight:600;color:rgba(45,32,34,0.5);margin-top:5px;">menipis + habis</div>
+      </div>
+      <div style="background:#fff;border:1px solid rgba(45,32,34,0.07);border-radius:14px;padding:18px 20px;">
+        <div style="display:flex;align-items:center;gap:10px;"><div style="width:34px;height:34px;border-radius:9px;background:#FBE7E7;color:#B83636;display:flex;align-items:center;justify-content:center;">{{ icCal }}</div><span style="font-size:12px;font-weight:700;color:rgba(45,32,34,0.5);">Hampir Kedaluwarsa</span></div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:23px;font-weight:700;margin-top:12px;color:#B83636;">{{ expCount }}</div>
+        <div style="font-size:12px;font-weight:600;color:rgba(45,32,34,0.5);margin-top:5px;">≤ 3 hari lagi</div>
+      </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div style="display:flex;align-items:center;gap:12px;margin-top:20px;flex-wrap:wrap;">
+      {{ catTabs }}
+      <div style="flex:1;"></div>
+      {{ statusTabs }}
+      <button onclick="{{ onOpname }}" style="height:42px;padding:0 16px;border-radius:10px;border:1.5px solid rgba(45,32,34,0.15);background:#fff;font-family:inherit;font-weight:700;font-size:13px;color:#2D2022;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:all .15s;" style-hover="background:#FFF4D6;">{{ icClipboard }}Stok Opname</button>
+      <button onclick="{{ onAddStock }}" style="height:42px;padding:0 18px;border-radius:10px;border:none;background:#A91F34;color:#fff;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:all .15s;" style-hover="background:#7F1628;">{{ icPlus }}Tambah Stok</button>
+    </div>
+
+    <!-- Table -->
+    <div style="background:#fff;border:1px solid rgba(45,32,34,0.07);border-radius:14px;overflow:hidden;margin-top:16px;box-shadow:0 1px 2px rgba(45,32,34,0.04),0 24px 48px -40px rgba(127,22,40,0.35);">
+      <div style="display:grid;grid-template-columns:2.4fr 1.1fr 1.3fr 1fr 1.2fr 1.2fr 1fr;padding:13px 22px;background:#FFF4D6;font-size:11.5px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#A9791F;">
+        <div>Bahan / Produk</div><div>Kategori</div><div style="text-align:right;">Stok</div><div style="text-align:right;">Min.</div><div>Status</div><div style="text-align:right;">Nilai</div><div style="text-align:right;">Aksi</div>
+      </div>
+      {{ rows }}
+    </div>
+  </div>
+
+  {{ modalEl }}
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1360,&quot;height&quot;:900},&quot;outletName&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Outlet Kemang&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;staffName&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Dewi Lestari&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  state = {
+    query: '', cat: 'all', status: 'all',
+    adjId: null, adjType: 'masuk', adjQty: 0,
+    items: [
+      { id: 'i1', name: 'Kulit Dimsum', sku: 'BB-001', cat: 'bahan', qty: 48, min: 30, unit: 'pack', cost: 12000, exp: 5 },
+      { id: 'i2', name: 'Daging Ayam Giling', sku: 'BB-002', cat: 'bahan', qty: 14, min: 20, unit: 'kg', cost: 45000, exp: 3 },
+      { id: 'i3', name: 'Udang Kupas', sku: 'BB-003', cat: 'bahan', qty: 6, min: 10, unit: 'kg', cost: 95000, exp: 2 },
+      { id: 'i4', name: 'Tepung Tapioka', sku: 'BB-004', cat: 'bahan', qty: 60, min: 25, unit: 'kg', cost: 14000, exp: null },
+      { id: 'i5', name: 'Jamur Kuping Kering', sku: 'BB-005', cat: 'bahan', qty: 0, min: 8, unit: 'kg', cost: 38000, exp: null },
+      { id: 'i6', name: 'Saus XO', sku: 'BB-006', cat: 'bahan', qty: 22, min: 12, unit: 'botol', cost: 28000, exp: null },
+      { id: 'i7', name: 'Minyak Goreng', sku: 'BB-007', cat: 'bahan', qty: 18, min: 10, unit: 'liter', cost: 20000, exp: null },
+      { id: 'i8', name: 'Kemasan Takeaway M', sku: 'KM-001', cat: 'kemasan', qty: 320, min: 200, unit: 'pcs', cost: 1500, exp: null },
+      { id: 'i9', name: 'Kemasan Takeaway L', sku: 'KM-002', cat: 'kemasan', qty: 140, min: 200, unit: 'pcs', cost: 2200, exp: null },
+      { id: 'i10', name: 'Paper Bag Bermerek', sku: 'KM-003', cat: 'kemasan', qty: 90, min: 100, unit: 'pcs', cost: 1200, exp: null },
+      { id: 'i11', name: 'Sumpit + Sendok Set', sku: 'KM-004', cat: 'kemasan', qty: 800, min: 300, unit: 'set', cost: 500, exp: null },
+      { id: 'i12', name: 'Teh Melati Kering', sku: 'MN-001', cat: 'minuman', qty: 25, min: 10, unit: 'pack', cost: 22000, exp: null },
+      { id: 'i13', name: 'Sirup Jeruk', sku: 'MN-002', cat: 'minuman', qty: 8, min: 6, unit: 'botol', cost: 26000, exp: 2 },
+      { id: 'i14', name: 'Gas LPG 12kg', sku: 'OP-001', cat: 'operasional', qty: 3, min: 2, unit: 'tabung', cost: 210000, exp: null },
+      { id: 'i15', name: 'Tisu Makan', sku: 'OP-002', cat: 'operasional', qty: 0, min: 12, unit: 'pack', cost: 9000, exp: null },
+    ],
+  };
+
+  CATS = [['all', 'Semua'], ['bahan', 'Bahan Baku'], ['kemasan', 'Kemasan'], ['minuman', 'Minuman'], ['operasional', 'Operasional']];
+  CAT_LABEL = { bahan: 'Bahan Baku', kemasan: 'Kemasan', minuman: 'Minuman', operasional: 'Operasional' };
+  CAT_TINT = { bahan: ['#FFF1F2', '#A91F34'], kemasan: ['#EEF2FB', '#3A5BB0'], minuman: ['#FCEEDB', '#C67A15'], operasional: ['#EFEAEA', '#5A4B4D'] };
+  STATUSES = [['all', 'Semua'], ['ok', 'Tersedia'], ['low', 'Menipis'], ['out', 'Habis']];
+  STATUS_TINT = { ok: ['#E4F4EC', '#238152', 'Tersedia'], low: ['#FCEEDB', '#C67A15', 'Menipis'], out: ['#EFEAEA', '#5A4B4D', 'Habis'] };
+
+  ICONS = {
+    search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+    plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
+    minus: '<path d="M5 12h14"/>',
+    box: '<path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/>',
+    value: '<line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>',
+    alert: '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+    cal: '<path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/>',
+    clipboard: '<rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/>',
+    x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+    check: '<path d="M20 6 9 17l-5-5"/>',
+    up: '<path d="M12 19V5"/><path d="m5 12 7-7 7 7"/>',
+    down: '<path d="M12 5v14"/><path d="m19 12-7 7-7-7"/>',
+    edit: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+  };
+  ic(name, size, color, sw) {
+    return React.createElement('svg', { width: size || 18, height: size || 18, viewBox: '0 0 24 24', fill: 'none', stroke: color || 'currentColor', strokeWidth: sw || 2, strokeLinecap: 'round', strokeLinejoin: 'round', dangerouslySetInnerHTML: { __html: this.ICONS[name] || '' } });
+  }
+
+  fmt(n) { return 'Rp ' + Math.round(n).toLocaleString('id-ID'); }
+  statusOf(it) { if (it.qty <= 0) return 'out'; if (it.qty <= it.min) return 'low'; return 'ok'; }
+  item(id) { return this.state.items.find(i => i.id === id); }
+
+  filtered() {
+    const q = this.state.query.trim().toLowerCase();
+    return this.state.items.filter(it =>
+      (this.state.cat === 'all' || it.cat === this.state.cat) &&
+      (this.state.status === 'all' || this.statusOf(it) === this.state.status) &&
+      (!q || it.name.toLowerCase().includes(q) || it.sku.toLowerCase().includes(q) || this.CAT_LABEL[it.cat].toLowerCase().includes(q))
+    );
+  }
+
+  openAdj(id, type) { this.setState({ adjId: id, adjType: type || 'masuk', adjQty: 0 }); }
+  closeAdj() { this.setState({ adjId: null }); }
+  confirmAdj() {
+    const { adjId, adjType, adjQty } = this.state;
+    this.setState(s => ({
+      adjId: null,
+      items: s.items.map(it => {
+        if (it.id !== adjId) return it;
+        let q = it.qty;
+        if (adjType === 'masuk') q = it.qty + adjQty;
+        else if (adjType === 'keluar') q = Math.max(0, it.qty - adjQty);
+        else q = adjQty;
+        return { ...it, qty: q };
+      }),
+    }));
+  }
+
+  renderTabs(list, current, onPick, kind) {
+    const h = React.createElement;
+    return h('div', { style: { display: 'flex', gap: '4px', background: '#fff', padding: '4px', borderRadius: '10px', border: '1px solid rgba(45,32,34,0.1)' } },
+      list.map(([key, label]) => {
+        const on = current === key;
+        return h('button', { key, onClick: () => onPick(key), style: { border: 'none', cursor: 'pointer', borderRadius: '7px', fontFamily: 'inherit', fontSize: '13px', fontWeight: 700, padding: '8px 14px', background: on ? (kind === 'status' ? '#2D2022' : '#A91F34') : 'transparent', color: on ? '#fff' : 'rgba(45,32,34,0.6)', transition: 'all .12s' } }, label);
+      }));
+  }
+
+  renderRows() {
+    const h = React.createElement;
+    const list = this.filtered();
+    if (list.length === 0) {
+      return h('div', { style: { textAlign: 'center', padding: '60px 20px', color: 'rgba(45,32,34,0.5)' } },
+        h('div', { style: { fontSize: '15px', fontWeight: 700, color: '#2D2022' } }, 'Tidak ada item'),
+        h('div', { style: { fontSize: '13px', marginTop: '4px' } }, 'Ubah filter atau kata kunci pencarian.'));
+    }
+    return h('div', null, list.map(it => {
+      const st = this.statusOf(it);
+      const [sBg, sColor, sLabel] = this.STATUS_TINT[st];
+      const [cBg, cColor] = this.CAT_TINT[it.cat];
+      const near = it.exp != null && it.exp <= 3;
+      return h('div', { key: it.id, style: { display: 'grid', gridTemplateColumns: '2.4fr 1.1fr 1.3fr 1fr 1.2fr 1.2fr 1fr', padding: '13px 22px', fontSize: '13.5px', borderTop: '1px solid rgba(45,32,34,0.06)', alignItems: 'center', background: st === 'out' ? '#FEFBFB' : '#fff' } },
+        h('div', { style: { display: 'flex', alignItems: 'center', gap: '12px' } },
+          h('div', { style: { width: '36px', height: '36px', borderRadius: '9px', background: cBg, color: cColor, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 } }, this.ic('box', 17, cColor, 2)),
+          h('div', { style: { minWidth: 0 } },
+            h('div', { style: { fontWeight: 700 } }, it.name),
+            h('div', { style: { display: 'flex', gap: '8px', alignItems: 'center', marginTop: '2px' } },
+              h('span', { style: { fontFamily: "'JetBrains Mono',monospace", fontSize: '11px', color: 'rgba(45,32,34,0.45)' } }, it.sku),
+              near ? h('span', { style: { fontSize: '10.5px', fontWeight: 700, color: '#B83636', background: '#FBE7E7', padding: '1px 7px', borderRadius: '5px' } }, 'exp ' + it.exp + 'h') : null,
+            ),
+          ),
+        ),
+        h('div', null, h('span', { style: { fontSize: '12px', fontWeight: 700, padding: '4px 10px', borderRadius: '7px', background: cBg, color: cColor } }, this.CAT_LABEL[it.cat])),
+        h('div', { style: { textAlign: 'right', fontFamily: "'JetBrains Mono',monospace", fontWeight: 700 } }, it.qty + ' ', h('span', { style: { fontWeight: 400, color: 'rgba(45,32,34,0.45)', fontSize: '12px' } }, it.unit)),
+        h('div', { style: { textAlign: 'right', fontFamily: "'JetBrains Mono',monospace", color: 'rgba(45,32,34,0.5)' } }, it.min),
+        h('div', null, h('span', { style: { display: 'inline-flex', alignItems: 'center', gap: '7px', fontSize: '12.5px', fontWeight: 700, padding: '5px 12px', borderRadius: '999px', background: sBg, color: sColor } }, h('span', { style: { width: '7px', height: '7px', borderRadius: '50%', background: sColor } }), sLabel)),
+        h('div', { style: { textAlign: 'right', fontFamily: "'JetBrains Mono',monospace", fontWeight: 600 } }, this.fmt(it.qty * it.cost)),
+        h('div', { style: { display: 'flex', gap: '6px', justifyContent: 'flex-end' } },
+          h('button', { onClick: () => this.openAdj(it.id, 'masuk'), 'aria-label': 'Stok masuk', title: 'Stok masuk', style: { width: '34px', height: '34px', borderRadius: '8px', border: '1.5px solid rgba(35,129,82,0.3)', background: '#E4F4EC', color: '#238152', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' } }, this.ic('up', 16, '#238152', 2.4)),
+          h('button', { onClick: () => this.openAdj(it.id, 'keluar'), 'aria-label': 'Stok keluar', title: 'Stok keluar', style: { width: '34px', height: '34px', borderRadius: '8px', border: '1.5px solid rgba(214,69,69,0.3)', background: '#FBE7E7', color: '#B83636', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' } }, this.ic('down', 16, '#B83636', 2.4)),
+        ),
+      );
+    }));
+  }
+
+  renderModal() {
+    const h = React.createElement;
+    if (!this.state.adjId) return null;
+    const it = this.item(this.state.adjId);
+    const { adjType, adjQty } = this.state;
+    const tabs = [['masuk', 'Stok Masuk', '#238152'], ['keluar', 'Stok Keluar', '#B83636'], ['opname', 'Opname', '#3A5BB0']];
+    let resultQty = it.qty;
+    if (adjType === 'masuk') resultQty = it.qty + adjQty;
+    else if (adjType === 'keluar') resultQty = Math.max(0, it.qty - adjQty);
+    else resultQty = adjQty;
+    const quicks = adjType === 'opname' ? [it.min, it.min * 2, 50, 100] : [5, 10, 25, 50];
+
+    return h('div', { onClick: () => this.closeAdj(), style: { position: 'fixed', inset: 0, background: 'rgba(45,32,34,0.5)', backdropFilter: 'blur(3px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, animation: 'wd-fade .15s ease' } },
+      h('div', { onClick: e => e.stopPropagation(), style: { width: '440px', background: '#fff', borderRadius: '18px', overflow: 'hidden', animation: 'wd-slideup .25s ease', boxShadow: '0 40px 80px -30px rgba(127,22,40,0.5)' } },
+        h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 22px', borderBottom: '1px solid rgba(45,32,34,0.08)' } },
+          h('div', null,
+            h('div', { style: { fontSize: '16px', fontWeight: 800 } }, 'Penyesuaian Stok'),
+            h('div', { style: { fontSize: '12.5px', color: 'rgba(45,32,34,0.55)', marginTop: '2px' } }, it.name + ' · ' + it.sku),
+          ),
+          h('button', { onClick: () => this.closeAdj(), style: { border: 'none', background: '#FFF9F2', width: '34px', height: '34px', borderRadius: '9px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(45,32,34,0.6)' } }, this.ic('x', 18, 'currentColor', 2.2)),
+        ),
+        h('div', { style: { padding: '20px 22px' } },
+          h('div', { style: { display: 'flex', gap: '6px', background: '#FFF9F2', padding: '4px', borderRadius: '11px', border: '1px solid rgba(45,32,34,0.08)', marginBottom: '18px' } },
+            tabs.map(([key, label, color]) => {
+              const on = adjType === key;
+              return h('button', { key, onClick: () => this.setState({ adjType: key, adjQty: 0 }), style: { flex: 1, height: '40px', border: 'none', borderRadius: '8px', cursor: 'pointer', fontFamily: 'inherit', fontSize: '13px', fontWeight: 700, background: on ? color : 'transparent', color: on ? '#fff' : 'rgba(45,32,34,0.6)', transition: 'all .12s' } }, label);
+            }),
+          ),
+          h('div', { style: { display: 'flex', alignItems: 'center', gap: '14px', justifyContent: 'center', padding: '4px 0 6px' } },
+            h('button', { onClick: () => this.setState(s => ({ adjQty: Math.max(0, s.adjQty - 1) })), style: { width: '48px', height: '48px', borderRadius: '10px', border: '1.5px solid rgba(45,32,34,0.15)', background: '#fff', color: '#A91F34', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' } }, this.ic('minus', 18, '#A91F34', 2.4)),
+            h('div', { style: { textAlign: 'center', minWidth: '110px' } },
+              h('div', { style: { fontFamily: "'JetBrains Mono',monospace", fontSize: '34px', fontWeight: 700 } }, adjQty),
+              h('div', { style: { fontSize: '11.5px', color: 'rgba(45,32,34,0.5)', fontWeight: 600 } }, it.unit),
+            ),
+            h('button', { onClick: () => this.setState(s => ({ adjQty: s.adjQty + 1 })), style: { width: '48px', height: '48px', borderRadius: '10px', border: 'none', background: '#A91F34', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' } }, this.ic('plus', 18, '#fff', 2.4)),
+          ),
+          h('div', { style: { display: 'flex', gap: '8px', marginTop: '14px' } },
+            quicks.map((n, i) => h('button', { key: i, onClick: () => this.setState({ adjQty: n }), style: { flex: 1, height: '38px', borderRadius: '8px', border: '1.5px solid rgba(45,32,34,0.12)', background: '#fff', fontFamily: "'JetBrains Mono',monospace", fontWeight: 700, fontSize: '12.5px', color: '#2D2022', cursor: 'pointer' } }, (adjType === 'opname' ? '' : '+') + n))),
+          h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '18px', padding: '14px 16px', background: '#FFF9F2', borderRadius: '11px', border: '1px solid rgba(45,32,34,0.08)' } },
+            h('div', null,
+              h('span', { style: { fontSize: '12.5px', color: 'rgba(45,32,34,0.55)' } }, 'Stok sekarang '),
+              h('span', { style: { fontFamily: "'JetBrains Mono',monospace", fontWeight: 700 } }, it.qty + ' ' + it.unit),
+            ),
+            h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
+              h('span', { style: { color: 'rgba(45,32,34,0.3)' } }, '→'),
+              h('span', { style: { fontFamily: "'JetBrains Mono',monospace", fontSize: '17px', fontWeight: 700, color: '#238152' } }, resultQty + ' ' + it.unit),
+            ),
+          ),
+          h('button', { onClick: () => this.confirmAdj(), style: { width: '100%', height: '52px', marginTop: '18px', borderRadius: '11px', border: 'none', background: '#FFD84D', color: '#2D2022', fontFamily: 'inherit', fontWeight: 800, fontSize: '15px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 12px 24px -12px rgba(233,154,34,0.8)' } }, this.ic('check', 18, 'currentColor', 2.4), 'Simpan Penyesuaian'),
+        ),
+      ),
+    );
+  }
+
+  renderVals() {
+    const items = this.state.items;
+    const totalValue = items.reduce((s, it) => s + it.qty * it.cost, 0);
+    const restock = items.filter(it => this.statusOf(it) !== 'ok').length;
+    const exp = items.filter(it => it.exp != null && it.exp <= 3).length;
+    return {
+      outletName: this.props.outletName ?? 'Outlet Kemang',
+      staffName: this.props.staffName ?? 'Dewi Lestari',
+      staffInitial: (this.props.staffName ?? 'Dewi Lestari').charAt(0),
+      icSearch: this.ic('search', 18, 'currentColor', 2),
+      icBox: this.ic('box', 17, 'currentColor', 2),
+      icValue: this.ic('value', 17, 'currentColor', 2),
+      icAlert: this.ic('alert', 17, 'currentColor', 2),
+      icCal: this.ic('cal', 17, 'currentColor', 2),
+      icClipboard: this.ic('clipboard', 16, 'currentColor', 2),
+      icPlus: this.ic('plus', 16, '#fff', 2.4),
+      totalSku: items.length,
+      totalValue: this.fmt(totalValue),
+      restockCount: restock,
+      expCount: exp,
+      onSearch: (e) => this.setState({ query: e.target.value }),
+      catTabs: this.renderTabs(this.CATS, this.state.cat, (k) => this.setState({ cat: k }), 'cat'),
+      statusTabs: this.renderTabs(this.STATUSES, this.state.status, (k) => this.setState({ status: k }), 'status'),
+      rows: this.renderRows(),
+      onOpname: () => { const first = this.filtered()[0]; if (first) this.openAdj(first.id, 'opname'); },
+      onAddStock: () => { const first = this.filtered()[0]; if (first) this.openAdj(first.id, 'masuk'); },
+      modalEl: this.renderModal(),
+    };
+  }
+}
+</script>
+</body>
+</html>

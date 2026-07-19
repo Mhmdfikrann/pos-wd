@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body { background: #F5F6F8; color: #23201F; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; -webkit-font-smoothing: antialiased; letter-spacing: -0.006em; overflow: hidden; }
+  a { color: #A91F34; text-decoration: none; }
+  a:hover { color: #7F1628; }
+  ::selection { background: #FFD84D; color: #23201F; }
+  @keyframes wd-blink { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+  @keyframes wd-grow { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+  .wd-scroll::-webkit-scrollbar { width: 7px; height: 7px; }
+  .wd-scroll::-webkit-scrollbar-thumb { background: rgba(35,32,31,0.16); border-radius: 8px; }
+  .wd-scroll::-webkit-scrollbar-track { background: transparent; }
+</style>
+</helmet>
+
+<div data-screen-label="Owner Dashboard" style="height:100vh;display:flex;background:#F5F6F8;">
+
+  <!-- ===== SIDEBAR ===== -->
+  <div style="width:256px;flex-shrink:0;background:#fff;border-right:1px solid rgba(35,32,31,0.07);display:flex;flex-direction:column;">
+    <div style="height:62px;flex-shrink:0;display:flex;align-items:center;gap:10px;padding:0 18px;border-bottom:1px solid rgba(35,32,31,0.06);">
+      <div style="width:38px;height:38px;border-radius:10px;background:#fff;border:1px solid rgba(35,32,31,0.08);display:flex;align-items:center;justify-content:center;overflow:hidden;">
+        <img src="assets/logo-icon.jpg" alt="Wanna Dimsum" style="width:34px;height:34px;object-fit:contain;" />
+      </div>
+      <div style="line-height:1.05;">
+        <div style="font-size:13.5px;font-weight:800;"><span style="color:#A91F34;">WANNA</span> DIMSUM</div>
+        <div style="font-size:10px;color:rgba(35,32,31,0.45);font-weight:600;margin-top:2px;">Business Suite</div>
+      </div>
+    </div>
+
+    <div class="wd-scroll" style="flex:1;overflow-y:auto;padding:10px 10px 20px;">
+      {{ nav }}
+    </div>
+  </div>
+
+  <!-- ===== MAIN ===== -->
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;">
+
+    <!-- Top bar -->
+    <div style="height:62px;flex-shrink:0;display:flex;align-items:center;gap:12px;padding:0 26px;background:#fff;border-bottom:1px solid rgba(35,32,31,0.06);">
+      <div style="font-size:17px;font-weight:800;">{{ activeTitle }}</div>
+      <div style="flex:1;"></div>
+      <span style="display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:700;padding:8px 12px;border-radius:9px;background:#EDF7F1;color:#238152;"><span style="width:8px;height:8px;border-radius:50%;background:#2E9D64;animation:wd-blink 1.6s infinite;"></span>Online</span>
+      <div style="position:relative;width:38px;height:38px;border:1px solid rgba(35,32,31,0.12);border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;">{{ bellIcon }}<span style="position:absolute;top:-4px;right:-4px;width:16px;height:16px;border-radius:50%;background:#A91F34;color:#fff;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;">3</span></div>
+      <div style="width:1px;height:26px;background:rgba(35,32,31,0.1);"></div>
+      <div style="display:flex;align-items:center;gap:9px;cursor:pointer;padding:3px 4px 3px 3px;border-radius:10px;" style-hover="background:#FAFAFA;">
+        <div style="width:34px;height:34px;border-radius:50%;background:#A91F34;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13.5px;">A</div>
+        <div style="line-height:1.15;">
+          <div style="font-size:12.5px;font-weight:700;">Andi Wijaya</div>
+          <div style="font-size:10.5px;color:rgba(35,32,31,0.5);">Owner</div>
+        </div>
+        <span style="display:flex;color:rgba(35,32,31,0.35);margin-left:2px;">{{ chevronDown }}</span>
+      </div>
+    </div>
+
+    <!-- Scrollable content -->
+    <div class="wd-scroll" style="flex:1;overflow-y:auto;">
+    <sc-if value="{{ isDashboard }}" hint-placeholder-val="{{ true }}">
+    <div style="padding:22px 26px 32px;">
+
+      <!-- Greeting -->
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:20px;flex-wrap:wrap;">
+        <div>
+          <div style="font-size:22px;font-weight:800;letter-spacing:-0.02em;">Halo, Andi</div>
+          <div style="font-size:13.5px;color:rgba(35,32,31,0.55);margin-top:3px;">Ringkasan bisnis · Sabtu, 18 Juli 2026</div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          {{ periodBtns }}
+        </div>
+      </div>
+
+      <!-- Stat cards -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;">
+        <div style="background:#fff;border:1px solid rgba(35,32,31,0.06);border-radius:14px;padding:18px 20px;">
+          <div style="display:flex;align-items:center;gap:10px;"><div style="width:34px;height:34px;border-radius:9px;background:#FFF1F2;color:#A91F34;display:flex;align-items:center;justify-content:center;">{{ icWallet }}</div><span style="font-size:12px;font-weight:700;color:rgba(35,32,31,0.5);">Omzet Hari Ini</span></div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:23px;font-weight:700;margin-top:12px;">Rp 4.820.000</div>
+          <div style="font-size:12px;font-weight:700;color:#2E9D64;margin-top:5px;">▲ 12% vs kemarin</div>
+        </div>
+        <div style="background:#fff;border:1px solid rgba(35,32,31,0.06);border-radius:14px;padding:18px 20px;">
+          <div style="display:flex;align-items:center;gap:10px;"><div style="width:34px;height:34px;border-radius:9px;background:#FFF7E9;color:#C67A15;display:flex;align-items:center;justify-content:center;">{{ icReceipt }}</div><span style="font-size:12px;font-weight:700;color:rgba(35,32,31,0.5);">Transaksi</span></div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:23px;font-weight:700;margin-top:12px;">184</div>
+          <div style="font-size:12px;font-weight:700;color:#2E9D64;margin-top:5px;">▲ 8% vs kemarin</div>
+        </div>
+        <div style="background:#fff;border:1px solid rgba(35,32,31,0.06);border-radius:14px;padding:18px 20px;">
+          <div style="display:flex;align-items:center;gap:10px;"><div style="width:34px;height:34px;border-radius:9px;background:#EDF7F1;color:#238152;display:flex;align-items:center;justify-content:center;">{{ icCube }}</div><span style="font-size:12px;font-weight:700;color:rgba(35,32,31,0.5);">Produk Terjual</span></div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:23px;font-weight:700;margin-top:12px;">742</div>
+          <div style="font-size:12px;font-weight:700;color:#2E9D64;margin-top:5px;">▲ 15% vs kemarin</div>
+        </div>
+        <div style="background:#fff;border:1px solid rgba(35,32,31,0.06);border-radius:14px;padding:18px 20px;">
+          <div style="display:flex;align-items:center;gap:10px;"><div style="width:34px;height:34px;border-radius:9px;background:#EEF2FB;color:#3A5BB0;display:flex;align-items:center;justify-content:center;">{{ icUsers }}</div><span style="font-size:12px;font-weight:700;color:rgba(35,32,31,0.5);">Pelanggan Baru</span></div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:23px;font-weight:700;margin-top:12px;">26</div>
+          <div style="font-size:12px;font-weight:700;color:#D64545;margin-top:5px;">▼ 3% vs kemarin</div>
+        </div>
+      </div>
+
+      <!-- Chart + payment -->
+      <div style="display:grid;grid-template-columns:1.7fr 1fr;gap:14px;margin-top:14px;">
+        <div style="background:#fff;border:1px solid rgba(35,32,31,0.06);border-radius:14px;padding:20px 22px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+            <div style="font-size:14.5px;font-weight:800;">Penjualan 7 Hari Terakhir</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:rgba(35,32,31,0.5);">Total <b style="color:#A91F34;">Rp 31,2 jt</b></div>
+          </div>
+          <div style="display:flex;align-items:flex-end;gap:14px;height:180px;padding-top:8px;">
+            {{ chartBars }}
+          </div>
+        </div>
+        <div style="background:#fff;border:1px solid rgba(35,32,31,0.06);border-radius:14px;padding:20px 22px;">
+          <div style="font-size:14.5px;font-weight:800;margin-bottom:18px;">Metode Pembayaran</div>
+          <div style="display:flex;flex-direction:column;gap:16px;">
+            {{ payRows }}
+          </div>
+        </div>
+      </div>
+
+      <!-- Top products + recent trx -->
+      <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:14px;margin-top:14px;">
+        <div style="background:#fff;border:1px solid rgba(35,32,31,0.06);border-radius:14px;overflow:hidden;">
+          <div style="padding:16px 22px 12px;font-size:14.5px;font-weight:800;">Produk Terlaris</div>
+          <div style="display:grid;grid-template-columns:2fr 1fr 1fr 0.8fr;padding:9px 22px;background:#FAFAFA;font-size:11px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:rgba(35,32,31,0.42);">
+            <div>Produk</div><div style="text-align:right;">Terjual</div><div style="text-align:right;">Omzet</div><div style="text-align:right;">Stok</div>
+          </div>
+          <sc-for list="{{ topProducts }}" as="t" hint-placeholder-count="5">
+            <div style="display:grid;grid-template-columns:2fr 1fr 1fr 0.8fr;padding:12px 22px;font-size:13.5px;border-top:1px solid rgba(35,32,31,0.05);align-items:center;">
+              <div style="display:flex;align-items:center;gap:11px;"><div style="width:30px;height:30px;border-radius:8px;background:{{ t.badgeBg }};color:{{ t.badgeColor }};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0;">{{ t.initial }}</div><span style="font-weight:700;">{{ t.name }}</span></div>
+              <div style="text-align:right;font-family:'JetBrains Mono',monospace;">{{ t.sold }}</div>
+              <div style="text-align:right;font-family:'JetBrains Mono',monospace;">{{ t.rev }}</div>
+              <div style="text-align:right;">{{ t.stockBadge }}</div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="background:#fff;border:1px solid rgba(35,32,31,0.06);border-radius:14px;overflow:hidden;">
+          <div style="padding:16px 20px 12px;display:flex;align-items:center;justify-content:space-between;"><span style="font-size:14.5px;font-weight:800;">Transaksi Terakhir</span><a href="#" style="font-size:12px;font-weight:700;">Lihat semua</a></div>
+          <sc-for list="{{ recentTrx }}" as="r" hint-placeholder-count="5">
+            <div style="display:flex;align-items:center;gap:12px;padding:11px 20px;border-top:1px solid rgba(35,32,31,0.05);">
+              <div style="width:34px;height:34px;border-radius:9px;background:#F5F6F8;color:rgba(35,32,31,0.55);display:flex;align-items:center;justify-content:center;flex-shrink:0;">{{ r.iconEl }}</div>
+              <div style="flex:1;min-width:0;line-height:1.2;">
+                <div style="font-size:13px;font-weight:700;">{{ r.id }}</div>
+                <div style="font-size:11.5px;color:rgba(35,32,31,0.5);margin-top:1px;">{{ r.meta }}</div>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;">{{ r.amt }}</div>
+                <div style="font-size:10.5px;color:rgba(35,32,31,0.45);margin-top:1px;">{{ r.time }}</div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+    {{ pageEl }}
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:800}}">
+class Component extends DCLogic {
+  state = {
+    active: 'Dashboard Penjualan',
+    expanded: { 'Dashboard': true },
+    period: 'Hari ini',
+  };
+
+  ICONS = {
+    dashboard: '<rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/>',
+    cashier: '<rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><line x1="16" x2="16" y1="14" y2="18"/><path d="M16 10h.01"/><path d="M12 10h.01"/><path d="M8 10h.01"/><path d="M12 14h.01"/><path d="M8 14h.01"/><path d="M12 18h.01"/><path d="M8 18h.01"/>',
+    orders: '<rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/>',
+    kitchen: '<path d="M17 21a1 1 0 0 0 1-1v-5.35c0-.457.316-.844.727-1.041a4 4 0 0 0-2.134-7.589 5 5 0 0 0-9.186 0 4 4 0 0 0-2.134 7.588c.411.198.727.585.727 1.041V20a1 1 0 0 0 1 1Z"/><path d="M6 17h12"/>',
+    report: '<path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>',
+    inventory: '<path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/>',
+    product: '<path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/>',
+    promo: '<path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M9 9h.01"/><path d="m15 9-6 6"/><path d="M15 15h.01"/>',
+    customer: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+    finance: '<path d="M16 7h6v6"/><path d="m22 7-8.5 8.5-5-5L2 17"/>',
+    expense: '<rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/>',
+    cashbook: '<path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20"/>',
+    payroll: '<circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1 1 10.34 18"/><path d="M7 6h1v4"/><path d="m16.71 13.88.7.71-2.82 2.82"/>',
+    invoice: '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/>',
+    staff: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="m16 11 2 2 4-4"/>',
+    schedule: '<path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/>',
+    kasbon: '<rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/>',
+    business: '<path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"/><path d="M2 7h20"/>',
+    terminal: '<rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/>',
+    online: '<path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/>',
+    settings: '<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>',
+    profile: '<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+    bell: '<path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/>',
+    wallet: '<path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/>',
+    cube: '<path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/>',
+    receiptSm: '<path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 17.5v-11"/>',
+    bag: '<path d="M16 10a4 4 0 0 1-8 0"/><path d="M3.103 6.034h17.794"/><path d="M3.4 5.467a2 2 0 0 0-.4 1.2V20a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6.667a2 2 0 0 0-.4-1.2l-2-2.667A2 2 0 0 0 17 2H7a2 2 0 0 0-1.6.8z"/>',
+    truck: '<path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/>',
+    card: '<rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/>',
+    logout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/>',
+    chevron: '<path d="m9 18 6-6-6-6"/>',
+    chevronDown: '<path d="m6 9 6 6 6-6"/>',
+    search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+    plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
+    filter: '<polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>',
+    download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/>',
+  };
+
+  ic(name, size, color, sw) {
+    const inner = this.ICONS[name] || '';
+    return React.createElement('svg', { width: size || 18, height: size || 18, viewBox: '0 0 24 24', fill: 'none', stroke: color || 'currentColor', strokeWidth: sw || 2, strokeLinecap: 'round', strokeLinejoin: 'round', dangerouslySetInnerHTML: { __html: inner } });
+  }
+
+  NAV = [
+    { ic: 'dashboard', label: 'Dashboard', children: [ { label: 'Dashboard Penjualan' }, { label: 'Dashboard Keuangan' } ] },
+    { ic: 'cashier', label: 'Kasir' },
+    { ic: 'orders', label: 'Daftar Pesanan' },
+    { ic: 'kitchen', label: 'Kitchen Display', children: [ { label: 'Pengaturan Kitchen Display' } ] },
+    { ic: 'report', label: 'Laporan', children: [
+      { label: 'Analisa Laporan', children: [ { label: 'Kepuasan Pelanggan' }, { label: 'Waktu Teramai Penjualan' }, { label: 'Perputaran Stok' }, { label: 'Pendapatan & Uang Masuk Harian' } ] },
+      { label: 'Laporan Penjualan', children: [ { label: 'Penjualan Outlet' }, { label: 'Ringkasan Penjualan' }, { label: 'Penjualan Per Terminal' }, { label: 'Laporan Per Kasir' }, { label: 'Penjualan Produk' }, { label: 'Laporan Tutup Kasir' } ] },
+      { label: 'Laporan Dapur', children: [ { label: 'Waktu Proses Order' }, { label: 'Waktu Proses Produk' } ] },
+      { label: 'Laporan Karyawan', children: [ { label: 'Absensi' }, { label: 'Laporan Komisi Tetap' }, { label: 'Laporan Komisi Bertingkat' } ] },
+      { label: 'Laporan Persediaan', children: [ { label: 'Ringkasan Persediaan' }, { label: 'Stok Kedaluwarsa' }, { label: 'Detail Persediaan' } ] },
+      { label: 'Laporan Settlement', children: [ { label: 'Order Online' }, { label: 'Detail Saldo' } ] },
+    ] },
+    { ic: 'inventory', label: 'Inventori', children: [
+      { label: 'Kelola Stok', children: [ { label: 'Daftar Stok' }, { label: 'Faktur Pembelian' }, { label: 'Produksi Stok' }, { label: 'Stok Opname' }, { label: 'Stok Terbuang' } ] },
+      { label: 'Pembelian Stok', children: [ { label: 'Daftar Pemasok' }, { label: 'Pemesanan Stok' }, { label: 'Pengiriman Pembelian' }, { label: 'Permintaan Barang' } ] },
+      { label: 'Mutasi Antar Outlet', children: [ { label: 'Permintaan Stok' }, { label: 'Kirim Stok' }, { label: 'Terima Mutasi Stok' }, { label: 'Stok Transit' } ] },
+      { label: 'Retur', children: [ { label: 'Retur Pembelian' }, { label: 'Rekonsiliasi Retur' } ] },
+      { label: 'Daftar Bahan Baku' },
+    ] },
+    { ic: 'product', label: 'Produk', children: [
+      { label: 'Buku Menu' }, { label: 'Daftar Layanan' }, { label: 'Daftar Kategori' }, { label: 'Produk Ekstra' },
+      { label: 'Daftar Departemen' }, { label: 'Produk Paket' }, { label: 'Master Resep' }, { label: 'Cetak Barcode' },
+      { label: 'Harga Berdasarkan Waktu' },
+    ] },
+    { ic: 'promo', label: 'Promosi', children: [
+      { label: 'Kupon Diskon', children: [ { label: 'Kupon Campaign' }, { label: 'Kupon List' } ] },
+      { label: 'Promo', children: [ { label: 'Advance' }, { label: 'Basic' }, { label: 'Per Total Pembelian' }, { label: 'Per Produk' } ] },
+      { label: 'Poin Reward', children: [ { label: 'Per Total Pembelian' }, { label: 'Per Produk' }, { label: 'Penukaran Poin' } ] },
+      { label: 'Loyalty', children: [ { label: 'Loyalty Program' }, { label: 'Daftar Loyalty' }, { label: 'Group Loyalty Pelanggan' } ] },
+    ] },
+    { ic: 'customer', label: 'Pelanggan', children: [
+      { label: 'Daftar Pelanggan' }, { label: 'Grup Pelanggan' }, { label: 'Grup Harga Spesial' }, { label: 'Kustom Data Pelanggan' }, { label: 'Pengaturan Data Pelanggan' },
+    ] },
+    { ic: 'finance', label: 'Laporan Keuangan', children: [
+      { label: 'Laba Rugi' }, { label: 'Buku Besar' }, { label: 'Jurnal' }, { label: 'Neraca' }, { label: 'Arus Kas' }, { label: 'Hutang' }, { label: 'Piutang' },
+    ] },
+    { ic: 'expense', label: 'Pengeluaran', children: [
+      { label: 'Daftar Pengeluaran' }, { label: 'Daftar Biaya' }, { label: 'Daftar Pembayaran Faktur' }, { label: 'Daftar Tagihan Rutin' }, { label: 'Daftar Mitra' },
+    ] },
+    { ic: 'cashbook', label: 'Buku Kas', children: [ { label: 'Daftar Buku Kas & Bank' }, { label: 'Daftar Transfer' } ] },
+    { ic: 'payroll', label: 'Gaji', children: [
+      { label: 'Laporan Pembayaran' }, { label: 'Struktur Gaji' }, { label: 'Pembayaran Payroll' }, { label: 'Rekonsiliasi Pembayaran' },
+    ] },
+    { ic: 'invoice', label: 'Invoice', children: [
+      { label: 'Daftar Invoice' }, { label: 'Daftar Pesanan Penjualan' }, { label: 'Daftar Penawaran Penjualan' }, { label: 'Daftar Pengiriman Penjualan' },
+    ] },
+    { ic: 'staff', label: 'Akses Karyawan', children: [
+      { label: 'Dashboard Karyawan' }, { label: 'Akses Karyawan' }, { label: 'Akses Absensi' }, { label: 'Radius Absensi' }, { label: 'Daftar Hak Akses' }, { label: 'Jadwal Kerja Karyawan' },
+    ] },
+    { ic: 'schedule', label: 'Jadwal Kerja', children: [ { label: 'Daftar Shift' }, { label: 'Jadwal Kerja' }, { label: 'Jadwal Kerja Karyawan' } ] },
+    { ic: 'kasbon', label: 'Kasbon', children: [ { label: 'Daftar Pengajuan Kasbon' }, { label: 'Daftar Akses Kasbon' } ] },
+    { ic: 'business', label: 'Pengaturan Bisnis', children: [
+      { label: 'Daftar Outlet' }, { label: 'Grup Outlet' }, { label: 'Pengaturan Denah dan Meja' }, { label: 'Notifikasi' }, { label: 'Akses Support' },
+    ] },
+    { ic: 'terminal', label: 'Terminal', children: [ { label: 'Daftar Perangkat' }, { label: 'Soundbox Device' } ] },
+    { ic: 'online', label: 'Order Online', children: [ { label: 'Pengaturan Penjualan' }, { label: 'Kustomisasi Toko' }, { label: 'Pengaturan Lainnya' } ] },
+    { ic: 'settings', label: 'Pengaturan', children: [
+      { label: 'Pengaturan Produk' }, { label: 'Pengaturan Transaksi' }, { label: 'Pengaturan Pengiriman' }, { label: 'Pengaturan Pembayaran' },
+    ] },
+    { ic: 'profile', label: 'Akun Profil', children: [ { label: 'Informasi Akun' }, { label: 'Informasi Bisnis' }, { label: 'Rekening Bank' } ] },
+  ];
+
+  CHART = [ ['Sen', 3.6], ['Sel', 4.1], ['Rab', 3.9], ['Kam', 4.6], ['Jum', 5.2], ['Sab', 6.1], ['Min', 3.7] ];
+  PAY = [ ['Tunai', 42, '#A91F34'], ['QRIS', 35, '#E99A22'], ['Kartu Debit', 15, '#3A5BB0'], ['GoFood / Grab', 8, '#2E9D64'] ];
+  TOP = [
+    { name: 'Dimsum Ayam', sold: 128, rev: 'Rp 2.304.000', stock: 86, tone: 'ok' },
+    { name: 'Hakau Udang', sold: 64, rev: 'Rp 1.536.000', stock: 6, tone: 'low' },
+    { name: 'Es Teh Melati', sold: 142, rev: 'Rp 994.000', stock: 999, tone: 'ok' },
+    { name: 'Paket Hemat A', sold: 38, rev: 'Rp 1.710.000', stock: 20, tone: 'ok' },
+    { name: 'Lumpia Kulit Tahu', sold: 22, rev: 'Rp 440.000', stock: 0, tone: 'out' },
+  ];
+  RECENT = [
+    { id: '#TRX-0429', meta: 'Dine-in · 3 item · Sinta', amt: 'Rp 94.600', time: '2 mnt lalu', ic: 'receiptSm' },
+    { id: '#TRX-0428', meta: 'Takeaway · 5 item · Sinta', amt: 'Rp 128.000', time: '11 mnt lalu', ic: 'bag' },
+    { id: '#TRX-0427', meta: 'GoFood · 2 item · Sistem', amt: 'Rp 46.000', time: '18 mnt lalu', ic: 'truck' },
+    { id: '#TRX-0426', meta: 'Dine-in · 8 item · Rian', amt: 'Rp 212.400', time: '25 mnt lalu', ic: 'receiptSm' },
+    { id: '#TRX-0425', meta: 'QRIS · 4 item · Rian', amt: 'Rp 71.000', time: '32 mnt lalu', ic: 'card' },
+  ];
+
+  toggle(label) { this.setState(s => ({ expanded: { ...s.expanded, [label]: !s.expanded[label] } })); }
+  select(label) { this.setState({ active: label }); }
+
+  renderNav() {
+    const h = React.createElement;
+    const { active, expanded } = this.state;
+
+    const leaf = (label, depth) => h('button', {
+      key: label, onClick: () => this.select(label),
+      style: {
+        display: 'flex', alignItems: 'center', width: '100%', textAlign: 'left', gap: '10px',
+        border: 'none', cursor: 'pointer', borderRadius: '9px', fontFamily: 'inherit',
+        fontSize: '12.5px', fontWeight: active === label ? 700 : 500,
+        padding: depth === 0 ? '9px 12px' : '8px 12px 8px ' + (16 + depth * 15) + 'px',
+        color: active === label ? '#A91F34' : 'rgba(35,32,31,0.6)',
+        background: active === label ? '#FFF1F2' : 'transparent',
+        transition: 'all .12s',
+      },
+      onMouseEnter: e => { if (active !== label) e.currentTarget.style.background = '#FAFAFA'; },
+      onMouseLeave: e => { if (active !== label) e.currentTarget.style.background = 'transparent'; },
+    }, depth > 0 ? h('span', { style: { width: '5px', height: '5px', borderRadius: '50%', background: active === label ? '#A91F34' : 'rgba(35,32,31,0.22)', flexShrink: 0 } }) : null, label);
+
+    const branch = (item, depth) => {
+      const open = !!expanded[item.label];
+      const anyActive = this.containsActive(item, active);
+      const header = h('button', {
+        onClick: () => this.toggle(item.label),
+        style: {
+          display: 'flex', alignItems: 'center', width: '100%', textAlign: 'left', gap: '10px',
+          border: 'none', cursor: 'pointer', borderRadius: '9px', fontFamily: 'inherit',
+          fontSize: depth === 0 ? '12.5px' : '12px', fontWeight: depth === 0 ? 600 : 600,
+          padding: depth === 0 ? '9px 12px' : '8px 12px 8px ' + (16 + depth * 15) + 'px',
+          color: anyActive ? '#A91F34' : 'rgba(35,32,31,0.75)',
+          background: 'transparent', transition: 'all .12s',
+        },
+        onMouseEnter: e => e.currentTarget.style.background = '#FAFAFA',
+        onMouseLeave: e => e.currentTarget.style.background = 'transparent',
+      },
+        depth === 0 ? h('span', { style: { display: 'flex', width: '20px', justifyContent: 'center', flexShrink: 0 } }, this.ic(item.ic, 17, anyActive ? '#A91F34' : 'rgba(35,32,31,0.5)')) : null,
+        h('span', { style: { flex: 1 } }, item.label),
+        h('span', { style: { display: 'flex', color: 'rgba(35,32,31,0.35)', transform: open ? 'rotate(90deg)' : 'none', transition: 'transform .15s' } }, this.ic('chevron', 13, 'currentColor', 2.2)),
+      );
+      const kids = open ? h('div', { style: { display: 'flex', flexDirection: 'column', gap: '1px', marginTop: '1px', marginBottom: '2px' } },
+        item.children.map(c => c.children ? branch(c, depth + 1) : leaf(c.label, depth + 1))) : null;
+      return h('div', { key: item.label }, header, kids);
+    };
+
+    return h('div', { style: { display: 'flex', flexDirection: 'column', gap: '2px' } },
+      this.NAV.map(item => item.children ? branch(item, 0) : leaf(item.label, 0)));
+  }
+
+  containsActive(item, active) {
+    if (item.label === active) return true;
+    if (!item.children) return false;
+    return item.children.some(c => this.containsActive(c, active));
+  }
+
+  fmt(n) { return 'Rp ' + Math.round(n).toLocaleString('id-ID'); }
+
+  findPath(label) {
+    const dfs = (items, trail) => {
+      for (const it of items) {
+        const t = trail.concat(it.label);
+        if (it.label === label) return t;
+        if (it.children) { const r = dfs(it.children, t); if (r) return r; }
+      }
+      return null;
+    };
+    return dfs(this.NAV, []) || [label];
+  }
+
+  pageType(label) {
+    if (label === 'Kasir') return 'kasir';
+    if (label === 'Kitchen Display') return 'board';
+    const l = label.toLowerCase();
+    const p = this.findPath(label).join(' / ').toLowerCase();
+    if (l.indexOf('dashboard') === 0) return 'report';
+    if (/^(pengaturan|informasi|kustom|notifikasi|radius|struktur gaji|kustomisasi|rekening|akses support|akun profil)/.test(l)) return 'form';
+    if (l === 'grup outlet' || l === 'grup pelanggan' || l === 'grup harga spesial') return 'table';
+    if (p.indexOf('laporan') > -1 || p.indexOf('analisa') > -1 || /^(laporan|analisa|ringkasan|rekonsiliasi|laba rugi|neraca|arus kas|buku besar|jurnal|hutang|piutang|detail saldo)/.test(l)) return 'report';
+    return 'table';
+  }
+
+  TONES = { ok: ['#E4F4EC', '#238152'], low: ['#FCEEDB', '#C67A15'], warn: ['#FCEEDB', '#C67A15'], out: ['#EFEAEA', '#5A4B4D'], info: ['#EEF2FB', '#3A5BB0'], danger: ['#FBE7E7', '#B83636'], neutral: ['#F1EEEA', '#5A4B4D'], gold: ['#FFF4D6', '#A9791F'] };
+  badge(text, tone) { const h = React.createElement; const [bg, c] = this.TONES[tone || 'neutral']; return h('span', { style: { display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '11.5px', fontWeight: 700, padding: '4px 11px', borderRadius: '999px', background: bg, color: c } }, h('span', { style: { width: '6px', height: '6px', borderRadius: '50%', background: c } }), text); }
+
+  crumb(label) {
+    const h = React.createElement; const path = this.findPath(label);
+    return h('div', { style: { display: 'flex', alignItems: 'center', gap: '7px', fontSize: '12px', fontWeight: 600, color: 'rgba(35,32,31,0.45)', marginBottom: '7px' } },
+      path.map((s, i) => h(React.Fragment, { key: i }, i > 0 ? h('span', { style: { color: 'rgba(35,32,31,0.25)' } }, '/') : null, h('span', { style: { color: i === path.length - 1 ? '#A91F34' : 'inherit' } }, s))));
+  }
+
+  pageHead(label, actionLabel, subtitle) {
+    const h = React.createElement;
+    return h('div', { style: { display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '16px', marginBottom: '18px', flexWrap: 'wrap' } },
+      h('div', {}, this.crumb(label),
+        h('div', { style: { fontSize: '22px', fontWeight: 800, letterSpacing: '-0.02em' } }, label),
+        subtitle ? h('div', { style: { fontSize: '13.5px', color: 'rgba(35,32,31,0.55)', marginTop: '3px' } }, subtitle) : null),
+      actionLabel ? h('button', { style: { height: '42px', padding: '0 18px', borderRadius: '10px', border: 'none', background: '#A91F34', color: '#fff', fontFamily: 'inherit', fontWeight: 700, fontSize: '13px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px' } }, this.ic('plus', 15, '#fff', 2.4), actionLabel) : null);
+  }
+
+  miniStat(label, value, sub, tone) {
+    const h = React.createElement;
+    const col = tone === 'up' ? '#2E9D64' : tone === 'down' ? '#D64545' : 'rgba(35,32,31,0.5)';
+    return h('div', { style: { background: '#fff', border: '1px solid rgba(35,32,31,0.06)', borderRadius: '14px', padding: '16px 18px' } },
+      h('div', { style: { fontSize: '12px', fontWeight: 700, color: 'rgba(35,32,31,0.5)' } }, label),
+      h('div', { style: { fontFamily: "'JetBrains Mono',monospace", fontSize: '21px', fontWeight: 700, marginTop: '8px' } }, value),
+      sub ? h('div', { style: { fontSize: '12px', fontWeight: 700, color: col, marginTop: '5px' } }, sub) : null);
+  }
+
+  toolbar(placeholder, filters) {
+    const h = React.createElement;
+    return h('div', { style: { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px', flexWrap: 'wrap' } },
+      h('div', { style: { position: 'relative', flex: '1', minWidth: '200px', maxWidth: '320px' } },
+        h('span', { style: { position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', display: 'flex', color: 'rgba(35,32,31,0.4)' } }, this.ic('search', 16, 'currentColor', 2)),
+        h('input', { placeholder: placeholder || 'Cari…', style: { width: '100%', height: '40px', border: '1px solid rgba(35,32,31,0.12)', borderRadius: '9px', padding: '0 12px 0 36px', fontFamily: 'inherit', fontSize: '13px', background: '#fff', outline: 'none' } })),
+      (filters || ['Semua Status']).map((f, i) => h('button', { key: i, style: { height: '40px', padding: '0 14px', borderRadius: '9px', border: '1px solid rgba(35,32,31,0.12)', background: '#fff', fontFamily: 'inherit', fontSize: '12.5px', fontWeight: 600, color: 'rgba(35,32,31,0.65)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '7px' } }, this.ic('filter', 14, 'currentColor', 2), f)),
+      h('div', { style: { flex: 1 } }),
+      h('button', { style: { height: '40px', padding: '0 14px', borderRadius: '9px', border: '1px solid rgba(35,32,31,0.12)', background: '#fff', fontFamily: 'inherit', fontSize: '12.5px', fontWeight: 600, color: 'rgba(35,32,31,0.65)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '7px' } }, this.ic('download', 14, 'currentColor', 2), 'Export'));
+  }
+
+  tableCard(d) {
+    const h = React.createElement; const cols = d.columns; const tmpl = cols.map(c => c.w || '1fr').join(' ');
+    const head = h('div', { style: { display: 'grid', gridTemplateColumns: tmpl, gap: '10px', padding: '11px 20px', background: '#FAFAFA', fontSize: '11px', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'rgba(35,32,31,0.42)' } },
+      cols.map((c, i) => h('div', { key: i, style: { textAlign: c.align || 'left' } }, c.label)));
+    const rows = d.rows.map((r, ri) => h('div', { key: ri, style: { display: 'grid', gridTemplateColumns: tmpl, gap: '10px', padding: '13px 20px', fontSize: '13.5px', borderTop: '1px solid rgba(35,32,31,0.05)', alignItems: 'center' } },
+      cols.map((c, ci) => {
+        const v = r[c.k]; let inner;
+        if (c.kind === 'badge' && Array.isArray(v)) inner = this.badge(v[0], v[1]);
+        else if (c.kind === 'sub' && Array.isArray(v)) inner = h('div', { style: { minWidth: 0 } }, h('div', { style: { fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } }, v[0]), h('div', { style: { fontSize: '11.5px', color: 'rgba(35,32,31,0.5)', marginTop: '1px' } }, v[1]));
+        else if (c.kind === 'mono') inner = h('span', { style: { fontFamily: "'JetBrains Mono',monospace" } }, v);
+        else if (c.kind === 'strong') inner = h('span', { style: { fontWeight: 700 } }, v);
+        else if (c.kind === 'action') inner = h('button', { style: { height: '30px', padding: '0 13px', borderRadius: '7px', border: '1px solid rgba(35,32,31,0.14)', background: '#fff', fontFamily: 'inherit', fontSize: '12px', fontWeight: 600, cursor: 'pointer', color: '#2D2022' } }, 'Detail');
+        else inner = v;
+        return h('div', { key: ci, style: { textAlign: c.align || 'left', minWidth: 0, whiteSpace: c.kind === 'sub' ? 'normal' : 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } }, inner);
+      })));
+    const foot = h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px', borderTop: '1px solid rgba(35,32,31,0.06)' } },
+      h('span', { style: { fontSize: '12.5px', color: 'rgba(35,32,31,0.5)' } }, 'Menampilkan 1–' + d.rows.length + ' dari ' + (d.total || d.rows.length) + ' data'),
+      h('div', { style: { display: 'flex', gap: '6px' } }, ['‹', '1', '2', '3', '›'].map((x, i) => h('button', { key: i, style: { minWidth: '32px', height: '32px', borderRadius: '7px', border: '1px solid rgba(35,32,31,0.12)', background: x === '1' ? '#A91F34' : '#fff', color: x === '1' ? '#fff' : 'rgba(35,32,31,0.6)', fontFamily: 'inherit', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer' } }, x))));
+    return h('div', { style: { background: '#fff', border: '1px solid rgba(35,32,31,0.06)', borderRadius: '14px', overflow: 'hidden' } }, head, h('div', {}, rows), foot);
+  }
+
+  actionFor(label) { const l = label.toLowerCase(); if (/laporan|analisa|ringkasan|rekonsiliasi/.test(l)) return null; if (/^(daftar|buku menu)/.test(l)) return 'Tambah'; return 'Tambah'; }
+
+  renderTable(label) {
+    const h = React.createElement; const d = this.tableData(label);
+    return h('div', {},
+      this.pageHead(label, this.actionFor(label), d.subtitle),
+      d.kpis && d.kpis.length ? h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(' + d.kpis.length + ',1fr)', gap: '14px', marginBottom: '16px' } }, d.kpis.map((k, i) => this.miniStat(k[0], k[1], k[3] || (k[2] ? (k[2] === 'up' ? '▲ tren naik' : '▼ tren turun') : null), k[2]))) : null,
+      this.toolbar('Cari ' + label.toLowerCase() + '…', d.filters),
+      this.tableCard(d));
+  }
+
+  reportFilter() {
+    const h = React.createElement;
+    const pills = ['Hari Ini', '7 Hari', 'Bulan Ini', 'Custom'];
+    return h('div', { style: { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', flexWrap: 'wrap' } },
+      h('div', { style: { display: 'flex', gap: '4px', background: '#fff', padding: '4px', borderRadius: '10px', border: '1px solid rgba(35,32,31,0.1)' } },
+        pills.map((p, i) => h('button', { key: i, style: { border: 'none', cursor: 'pointer', borderRadius: '7px', fontFamily: 'inherit', fontSize: '12.5px', fontWeight: 700, padding: '8px 14px', background: i === 2 ? '#23201F' : 'transparent', color: i === 2 ? '#fff' : 'rgba(35,32,31,0.6)' } }, p))),
+      h('button', { style: { height: '40px', padding: '0 14px', borderRadius: '9px', border: '1px solid rgba(35,32,31,0.12)', background: '#fff', fontFamily: 'inherit', fontSize: '12.5px', fontWeight: 600, color: 'rgba(35,32,31,0.65)', cursor: 'pointer' } }, 'Semua Outlet'),
+      h('div', { style: { flex: 1 } }),
+      h('button', { style: { height: '40px', padding: '0 14px', borderRadius: '9px', border: 'none', background: '#A91F34', color: '#fff', fontFamily: 'inherit', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '7px' } }, this.ic('download', 14, '#fff', 2), 'Unduh Laporan'));
+  }
+
+  reportChartCard() {
+    const h = React.createElement;
+    const data = this.CHART; const maxV = Math.max(...data.map(c => c[1]));
+    return h('div', { style: { background: '#fff', border: '1px solid rgba(35,32,31,0.06)', borderRadius: '14px', padding: '20px 22px', marginBottom: '16px' } },
+      h('div', { style: { fontSize: '14.5px', fontWeight: 800, marginBottom: '18px' } }, 'Tren Periode'),
+      h('div', { style: { display: 'flex', alignItems: 'flex-end', gap: '14px', height: '180px', paddingTop: '8px' } },
+        data.map(([day, v], i) => { const peak = v === maxV; return h('div', { key: day, style: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', height: '100%', justifyContent: 'flex-end' } },
+          h('div', { style: { fontFamily: "'JetBrains Mono',monospace", fontSize: '10.5px', fontWeight: 700, color: peak ? '#A91F34' : 'rgba(35,32,31,0.4)' } }, v.toFixed(1) + 'jt'),
+          h('div', { style: { width: '100%', maxWidth: '46px', height: (v / maxV * 100) + '%', minHeight: '6px', borderRadius: '8px 8px 4px 4px', background: peak ? '#A91F34' : '#F3C6CD' } }),
+          h('div', { style: { fontSize: '11px', fontWeight: 600, color: 'rgba(35,32,31,0.5)' } }, day)); })));
+  }
+
+  renderReport(label) {
+    const h = React.createElement; const d = this.tableData(label);
+    const kpis = (d.kpis && d.kpis.length) ? d.kpis : [['Total Omzet', 'Rp 128,4 jt', 'up'], ['Transaksi', '1.842', null], ['Rata-rata / Order', 'Rp 69.700', 'up']];
+    return h('div', {},
+      this.pageHead(label, null, 'Ringkasan ' + label.toLowerCase() + ' untuk periode terpilih.'),
+      this.reportFilter(),
+      h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '14px', marginBottom: '16px' } }, kpis.slice(0, 3).map((k, i) => this.miniStat(k[0], k[1], k[3] || (k[2] ? (k[2] === 'up' ? '▲ vs periode lalu' : '▼ vs periode lalu') : null), k[2]))),
+      /penjualan|dashboard|arus kas|analisa|teramai|pendapatan|omzet|settlement|penjualan produk|outlet/.test(label.toLowerCase()) ? this.reportChartCard() : null,
+      this.tableCard(d));
+  }
+
+  field(label, value, kind, opts) {
+    const h = React.createElement;
+    let ctrl;
+    if (kind === 'toggle') ctrl = h('div', { style: { width: '46px', height: '26px', borderRadius: '999px', background: value ? '#2E9D64' : 'rgba(35,32,31,0.2)', position: 'relative', flexShrink: 0 } }, h('div', { style: { position: 'absolute', top: '3px', left: value ? '23px' : '3px', width: '20px', height: '20px', borderRadius: '50%', background: '#fff', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' } }));
+    else if (kind === 'select') ctrl = h('div', { style: { width: '100%', height: '44px', border: '1px solid rgba(35,32,31,0.15)', borderRadius: '9px', padding: '0 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', fontSize: '14px' } }, h('span', {}, value), this.ic('chevronDown', 15, 'rgba(35,32,31,0.4)', 2));
+    else if (kind === 'area') ctrl = h('div', { style: { width: '100%', minHeight: '76px', border: '1px solid rgba(35,32,31,0.15)', borderRadius: '9px', padding: '11px 14px', background: '#fff', fontSize: '14px', color: 'rgba(35,32,31,0.75)' } }, value);
+    else ctrl = h('div', { style: { width: '100%', height: '44px', border: '1px solid rgba(35,32,31,0.15)', borderRadius: '9px', padding: '0 14px', display: 'flex', alignItems: 'center', background: '#fff', fontSize: '14px', fontFamily: kind === 'mono' ? "'JetBrains Mono',monospace" : 'inherit' } }, value);
+    if (kind === 'toggle') return h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '14px', padding: '4px 0' } }, h('div', {}, h('div', { style: { fontSize: '13.5px', fontWeight: 700 } }, label), opts ? h('div', { style: { fontSize: '12px', color: 'rgba(35,32,31,0.5)', marginTop: '2px' } }, opts) : null), ctrl);
+    return h('div', {}, h('label', { style: { display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '7px' } }, label), ctrl);
+  }
+
+  formSection(title, fields) {
+    const h = React.createElement;
+    return h('div', { style: { background: '#fff', border: '1px solid rgba(35,32,31,0.06)', borderRadius: '14px', padding: '22px 24px', marginBottom: '16px' } },
+      h('div', { style: { fontSize: '14.5px', fontWeight: 800, marginBottom: '18px' } }, title),
+      h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '18px 20px' } }, fields.map((f, i) => h('div', { key: i, style: { gridColumn: f[3] === 'full' ? '1 / -1' : 'auto' } }, this.field(f[0], f[1], f[2], f[4])))));
+  }
+
+  renderForm(label) {
+    const h = React.createElement;
+    return h('div', {},
+      this.pageHead(label, null, 'Kelola konfigurasi untuk ' + label.toLowerCase() + '.'),
+      this.formSection('Informasi Umum', [
+        ['Nama', 'Wanna Dimsum', 'text'], ['Kode', 'WD-KMG', 'mono'],
+        ['Kategori', 'Operasional', 'select'], ['Status', 'Aktif', 'select'],
+        ['Deskripsi', 'Konfigurasi ' + label.toLowerCase() + ' untuk outlet ini.', 'area', 'full'],
+      ]),
+      this.formSection('Preferensi', [
+        ['Zona Waktu', 'WIB (GMT+7)', 'select'], ['Mata Uang', 'Rupiah (IDR)', 'select'],
+        ['Aktifkan modul ini', true, 'toggle', null, 'Tampilkan pada menu dan alur operasional'],
+        ['Wajib persetujuan manager', false, 'toggle', null, 'Perubahan butuh approval'],
+      ]),
+      h('div', { style: { display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '4px' } },
+        h('button', { style: { height: '44px', padding: '0 20px', borderRadius: '10px', border: '1px solid rgba(35,32,31,0.15)', background: '#fff', fontFamily: 'inherit', fontWeight: 700, fontSize: '13.5px', cursor: 'pointer', color: '#2D2022' } }, 'Batal'),
+        h('button', { style: { height: '44px', padding: '0 24px', borderRadius: '10px', border: 'none', background: '#A91F34', color: '#fff', fontFamily: 'inherit', fontWeight: 700, fontSize: '13.5px', cursor: 'pointer' } }, 'Simpan Perubahan')));
+  }
+
+  renderBoard(label) {
+    const h = React.createElement;
+    const cols = [['Baru', '#3A5BB0', '#EEF2FB', [['#0431', 'Meja A-12', '2:40'], ['#0430', 'GoFood', '1:30']]], ['Sedang Dimasak', '#C67A15', '#FCEEDB', [['#0429', 'Antrean T-07', '5:12'], ['#0428', 'Meja B-03', '7:20']]], ['Siap Antar', '#238152', '#E4F4EC', [['#0426', 'Meja A-05', '3:00']]]];
+    return h('div', {},
+      this.pageHead(label, null, 'Pantau antrean pesanan dapur secara real-time.'),
+      h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '14px' } }, cols.map((c, i) => h('div', { key: i, style: { background: '#fff', border: '1px solid rgba(35,32,31,0.06)', borderRadius: '14px', overflow: 'hidden' } },
+        h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px', background: c[2] } }, h('span', { style: { fontSize: '14px', fontWeight: 800, color: c[1] } }, c[0]), h('span', { style: { fontFamily: "'JetBrains Mono',monospace", fontSize: '12px', fontWeight: 700, color: '#fff', background: c[1], padding: '2px 9px', borderRadius: '999px' } }, c[3].length)),
+        h('div', { style: { padding: '12px', display: 'flex', flexDirection: 'column', gap: '10px' } }, c[3].map((t, j) => h('div', { key: j, style: { border: '1px solid rgba(35,32,31,0.1)', borderRadius: '10px', padding: '12px' } },
+          h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } }, h('span', { style: { fontFamily: "'JetBrains Mono',monospace", fontWeight: 700 } }, t[0]), h('span', { style: { fontFamily: "'JetBrains Mono',monospace", fontSize: '12.5px', color: '#C67A15', fontWeight: 700 } }, t[2])),
+          h('div', { style: { fontSize: '13px', fontWeight: 700, color: '#A91F34', marginTop: '4px' } }, t[1]))))))));
+  }
+
+  renderKasir() {
+    const h = React.createElement;
+    return h('div', {},
+      this.pageHead('Kasir', null, 'Layar transaksi untuk kasir.'),
+      h('div', { style: { background: '#fff', border: '1px solid rgba(35,32,31,0.06)', borderRadius: '16px', padding: '48px', textAlign: 'center', maxWidth: '520px', margin: '20px auto 0' } },
+        h('div', { style: { width: '72px', height: '72px', borderRadius: '16px', background: '#FFF1F2', color: '#A91F34', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px' } }, this.ic('cashier', 34, '#A91F34', 1.8)),
+        h('div', { style: { fontSize: '19px', fontWeight: 800 } }, 'Buka Layar Kasir'),
+        h('div', { style: { fontSize: '13.5px', color: 'rgba(35,32,31,0.55)', marginTop: '6px', maxWidth: '38ch', marginLeft: 'auto', marginRight: 'auto' } }, 'Layar kasir POS tersedia sebagai mockup terpisah dengan katalog, keranjang, dan alur pembayaran lengkap.'),
+        h('a', { href: 'Wanna Dimsum Kasir.dc.html', style: { display: 'inline-flex', alignItems: 'center', gap: '8px', height: '48px', padding: '0 24px', marginTop: '22px', borderRadius: '11px', background: '#FFD84D', color: '#2D2022', fontWeight: 800, fontSize: '15px', boxShadow: '0 12px 24px -12px rgba(233,154,34,0.8)' } }, 'Buka Kasir →')));
+  }
+
+  renderPageEl() {
+    const h = React.createElement; const active = this.state.active;
+    if (active === 'Dashboard Penjualan') return null;
+    const t = this.pageType(active);
+    let el;
+    if (t === 'report') el = this.renderReport(active);
+    else if (t === 'form') el = this.renderForm(active);
+    else if (t === 'board') el = this.renderBoard(active);
+    else if (t === 'kasir') el = this.renderKasir();
+    else el = this.renderTable(active);
+    return h('div', { style: { padding: '22px 26px 32px' } }, el);
+  }
+
+  tableData(label) {
+    const l = label.toLowerCase();
+    const rp = (n) => this.fmt(n);
+    const A = { k: 'act', label: '', w: '0.7fr', align: 'right', kind: 'action' };
+    const mk = (kpis, columns, rows, total) => ({ kpis, columns, rows, total: total || rows.length });
+
+    if (/pelanggan|member|loyalty/.test(l) && !/program|campaign|reward|poin|group loyalty/.test(l)) return mk(
+      [['Total Pelanggan', '1.284', 'up'], ['Member Aktif', '842'], ['Baru Bulan Ini', '126', 'up']],
+      [{ k: 'n', label: 'Nama', w: '2fr', kind: 'sub' }, { k: 'hp', label: 'No. HP', w: '1.3fr', kind: 'mono' }, { k: 'v', label: 'Kunjungan', w: '1fr', align: 'right', kind: 'mono' }, { k: 't', label: 'Total Belanja', w: '1.3fr', align: 'right', kind: 'mono' }, { k: 'g', label: 'Grup', w: '1fr', kind: 'badge' }, A],
+      [{ n: ['Budi Santoso', 'Member sejak 2024'], hp: '0812-3456-7890', v: '42', t: rp(3820000), g: ['Gold', 'gold'] },
+       { n: ['Siti Rahma', 'Member sejak 2023'], hp: '0813-2211-0098', v: '88', t: rp(7640000), g: ['Platinum', 'info'] },
+       { n: ['Andi Kurnia', 'Member sejak 2025'], hp: '0821-9090-1122', v: '12', t: rp(940000), g: ['Silver', 'neutral'] },
+       { n: ['Dewi Lestari', 'Member sejak 2024'], hp: '0857-1200-3344', v: '31', t: rp(2410000), g: ['Gold', 'gold'] },
+       { n: ['Rian Pratama', 'Non-member'], hp: '0819-4455-6677', v: '5', t: rp(320000), g: ['Reguler', 'neutral'] },
+       { n: ['Maya Putri', 'Member sejak 2022'], hp: '0812-8888-1010', v: '156', t: rp(12800000), g: ['Platinum', 'info'] }]);
+
+    if (/pemasok|mitra/.test(l)) return mk(
+      [['Total Pemasok', '38', null], ['Utang Berjalan', 'Rp 18,2 jt', null], ['Jatuh Tempo', '4', 'down']],
+      [{ k: 'n', label: 'Pemasok', w: '2fr', kind: 'sub' }, { k: 'c', label: 'Kontak', w: '1.3fr', kind: 'mono' }, { k: 'kat', label: 'Kategori', w: '1.2fr' }, { k: 's', label: 'Saldo Utang', w: '1.3fr', align: 'right', kind: 'mono' }, { k: 'st', label: 'Status', w: '1fr', kind: 'badge' }, A],
+      [{ n: ['CV Sumber Ayam', 'Jakarta Barat'], c: '021-555-1200', kat: 'Bahan Baku', s: rp(6400000), st: ['Aktif', 'ok'] },
+       { n: ['UD Laut Segar', 'Muara Angke'], c: '0812-7000-1234', kat: 'Seafood', s: rp(9200000), st: ['Jatuh Tempo', 'danger'] },
+       { n: ['Toko Kemasan Jaya', 'Tangerang'], c: '021-888-9090', kat: 'Kemasan', s: rp(1200000), st: ['Aktif', 'ok'] },
+       { n: ['PT Gas Nusantara', 'Bekasi'], c: '021-444-3322', kat: 'Operasional', s: rp(0), st: ['Lunas', 'neutral'] },
+       { n: ['Kebun Sayur Lestari', 'Bogor'], c: '0857-1122-3344', kat: 'Bahan Baku', s: rp(1400000), st: ['Aktif', 'ok'] }]);
+
+    if (/pengeluaran|biaya|tagihan|pembayaran faktur/.test(l)) return mk(
+      [['Total Bulan Ini', 'Rp 24,6 jt', 'down'], ['Menunggu Bayar', '6', null], ['Terbesar', 'Sewa Outlet', null]],
+      [{ k: 'd', label: 'Tanggal', w: '1.1fr', kind: 'mono' }, { k: 'kat', label: 'Kategori', w: '1.3fr' }, { k: 'ket', label: 'Deskripsi', w: '2fr', kind: 'sub' }, { k: 'n', label: 'Nominal', w: '1.3fr', align: 'right', kind: 'mono' }, { k: 'st', label: 'Status', w: '1fr', kind: 'badge' }, A],
+      [{ d: '18/07/26', kat: 'Sewa', ket: ['Sewa outlet Juli', 'Bulanan'], n: rp(12000000), st: ['Lunas', 'ok'] },
+       { d: '17/07/26', kat: 'Utilitas', ket: ['Listrik & air', 'PLN + PDAM'], n: rp(3400000), st: ['Lunas', 'ok'] },
+       { d: '16/07/26', kat: 'Gaji', ket: ['Payroll paruh waktu', '3 karyawan'], n: rp(4800000), st: ['Menunggu', 'warn'] },
+       { d: '15/07/26', kat: 'Operasional', ket: ['Servis kulkas', 'Perbaikan'], n: rp(650000), st: ['Lunas', 'ok'] },
+       { d: '14/07/26', kat: 'Marketing', ket: ['Iklan sosial media', 'Kampanye'], n: rp(1200000), st: ['Menunggu', 'warn'] }]);
+
+    if (/invoice|penawaran|pesanan penjualan|pengiriman penjualan/.test(l)) return mk(
+      [['Total Invoice', '214', null], ['Belum Dibayar', 'Rp 32,1 jt', 'down'], ['Jatuh Tempo', '9', 'down']],
+      [{ k: 'no', label: 'No.', w: '1.2fr', kind: 'mono' }, { k: 'c', label: 'Pelanggan', w: '1.6fr', kind: 'strong' }, { k: 'd', label: 'Tanggal', w: '1fr', kind: 'mono' }, { k: 'due', label: 'Jatuh Tempo', w: '1.1fr', kind: 'mono' }, { k: 'n', label: 'Nominal', w: '1.3fr', align: 'right', kind: 'mono' }, { k: 'st', label: 'Status', w: '1fr', kind: 'badge' }, A],
+      [{ no: 'INV-2041', c: 'PT Boga Rasa', d: '18/07/26', due: '25/07/26', n: rp(4800000), st: ['Terbayar', 'ok'] },
+       { no: 'INV-2040', c: 'Kantin Sekolah A', d: '17/07/26', due: '24/07/26', n: rp(2200000), st: ['Menunggu', 'warn'] },
+       { no: 'INV-2039', c: 'Event Organizer Nusa', d: '15/07/26', due: '14/07/26', n: rp(9600000), st: ['Terlambat', 'danger'] },
+       { no: 'INV-2038', c: 'Cafe Mitra', d: '14/07/26', due: '21/07/26', n: rp(1800000), st: ['Terbayar', 'ok'] },
+       { no: 'INV-2037', c: 'Katering Bahagia', d: '12/07/26', due: '19/07/26', n: rp(3200000), st: ['Menunggu', 'warn'] }]);
+
+    if (/stok|persediaan|bahan|produksi|opname|mutasi|transit|retur|pembelian|pemesanan|permintaan|faktur pembelian/.test(l)) return mk(
+      [['Total SKU', '156', null], ['Nilai Persediaan', 'Rp 48,7 jt', null], ['Perlu Restock', '12', 'down']],
+      [{ k: 'n', label: 'Bahan / Produk', w: '2fr', kind: 'sub' }, { k: 'sku', label: 'SKU', w: '1fr', kind: 'mono' }, { k: 's', label: 'Stok', w: '1fr', align: 'right', kind: 'mono' }, { k: 'm', label: 'Min.', w: '0.8fr', align: 'right', kind: 'mono' }, { k: 'st', label: 'Status', w: '1.1fr', kind: 'badge' }, { k: 'v', label: 'Nilai', w: '1.2fr', align: 'right', kind: 'mono' }, A],
+      [{ n: ['Kulit Dimsum', 'Bahan Baku'], sku: 'BB-001', s: '48 pack', m: '30', st: ['Tersedia', 'ok'], v: rp(576000) },
+       { n: ['Daging Ayam Giling', 'Bahan Baku'], sku: 'BB-002', s: '14 kg', m: '20', st: ['Menipis', 'warn'], v: rp(630000) },
+       { n: ['Udang Kupas', 'Bahan Baku'], sku: 'BB-003', s: '6 kg', m: '10', st: ['Menipis', 'warn'], v: rp(570000) },
+       { n: ['Jamur Kuping Kering', 'Bahan Baku'], sku: 'BB-005', s: '0 kg', m: '8', st: ['Habis', 'out'], v: rp(0) },
+       { n: ['Kemasan Takeaway L', 'Kemasan'], sku: 'KM-002', s: '140 pcs', m: '200', st: ['Menipis', 'warn'], v: rp(308000) },
+       { n: ['Gas LPG 12kg', 'Operasional'], sku: 'OP-001', s: '3 tabung', m: '2', st: ['Tersedia', 'ok'], v: rp(630000) }]);
+
+    if (/produk|menu|kategori|departemen|paket|resep|ekstra|layanan|barcode|harga berdasarkan/.test(l)) return mk(
+      [['Total Produk', '86', null], ['Kategori', '7', null], ['Nonaktif', '4', null]],
+      [{ k: 'n', label: 'Produk', w: '2fr', kind: 'sub' }, { k: 'kat', label: 'Kategori', w: '1.2fr' }, { k: 'sku', label: 'SKU', w: '1fr', kind: 'mono' }, { k: 'h', label: 'Harga', w: '1.1fr', align: 'right', kind: 'mono' }, { k: 'st', label: 'Status', w: '1.1fr', kind: 'badge' }, A],
+      [{ n: ['Dimsum Ayam', 'Original'], kat: 'Dimsum', sku: 'MN-001', h: rp(18000), st: ['Tersedia', 'ok'] },
+       { n: ['Hakau Udang', 'Kukus'], kat: 'Kukus', sku: 'MN-005', h: rp(24000), st: ['Menipis', 'warn'] },
+       { n: ['Paket Hemat A', '4 item'], kat: 'Paket', sku: 'PK-001', h: rp(45000), st: ['Tersedia', 'ok'] },
+       { n: ['Es Teh Melati', 'Minuman'], kat: 'Minuman', sku: 'MN-014', h: rp(7000), st: ['Tersedia', 'ok'] },
+       { n: ['Lumpia Kulit Tahu', 'Goreng'], kat: 'Goreng', sku: 'MN-010', h: rp(20000), st: ['Habis', 'out'] },
+       { n: ['Xiao Long Bao', 'Kukus'], kat: 'Kukus', sku: 'MN-006', h: rp(28000), st: ['Tersedia', 'ok'] }]);
+
+    if (/karyawan|akses|absensi|komisi|shift|jadwal|kasbon|payroll|gaji|hak akses|dashboard karyawan/.test(l)) return mk(
+      [['Total Karyawan', '24', null], ['Hadir Hari Ini', '18', null], ['Cuti / Izin', '2', null]],
+      [{ k: 'n', label: 'Karyawan', w: '2fr', kind: 'sub' }, { k: 'r', label: 'Jabatan', w: '1.2fr', kind: 'badge' }, { k: 'o', label: 'Outlet', w: '1.2fr' }, { k: 'st', label: 'Status', w: '1fr', kind: 'badge' }, A],
+      [{ n: ['Sinta Dewi', 'ID-1024'], r: ['Kasir', 'gold'], o: 'Kemang', st: ['Hadir', 'ok'] },
+       { n: ['Rian Pratama', 'ID-1019'], r: ['Dapur', 'warn'], o: 'Kemang', st: ['Hadir', 'ok'] },
+       { n: ['Dewi Lestari', 'ID-1031'], r: ['Inventory', 'neutral'], o: 'Kemang', st: ['Cuti', 'info'] },
+       { n: ['Agus Salim', 'ID-1008'], r: ['Manager', 'danger'], o: 'Kemang', st: ['Hadir', 'ok'] },
+       { n: ['Nina Kartika', 'ID-1042'], r: ['Kasir', 'gold'], o: 'Senayan', st: ['Izin', 'warn'] }]);
+
+    if (/kupon|promo|poin|reward|campaign|loyalty program|penukaran|advance|basic/.test(l)) return mk(
+      [['Promo Aktif', '8', null], ['Kupon Terpakai', '1.204', 'up'], ['Nilai Diskon', 'Rp 6,4 jt', null]],
+      [{ k: 'n', label: 'Nama', w: '2fr', kind: 'strong' }, { k: 't', label: 'Tipe', w: '1.2fr', kind: 'badge' }, { k: 'v', label: 'Nilai', w: '1fr', align: 'right', kind: 'mono' }, { k: 'per', label: 'Periode', w: '1.4fr', kind: 'mono' }, { k: 'st', label: 'Status', w: '1fr', kind: 'badge' }, A],
+      [{ n: 'Diskon Akhir Pekan', t: ['Persentase', 'info'], v: '15%', per: '01–31 Jul', st: ['Aktif', 'ok'] },
+       { n: 'Beli 2 Gratis 1 Dimsum', t: ['Bundling', 'gold'], v: 'B2G1', per: '10–20 Jul', st: ['Aktif', 'ok'] },
+       { n: 'Poin Member x2', t: ['Poin', 'warn'], v: '2x', per: '01–15 Jul', st: ['Berakhir', 'neutral'] },
+       { n: 'Kupon Pelanggan Baru', t: ['Nominal', 'info'], v: rp(10000), per: 'Sepanjang', st: ['Aktif', 'ok'] },
+       { n: 'Flash Sale Siang', t: ['Persentase', 'info'], v: '25%', per: '13:00–15:00', st: ['Terjadwal', 'warn'] }]);
+
+    if (/terminal|perangkat|soundbox|device/.test(l)) return mk(
+      [['Perangkat', '12', null], ['Online', '10', null], ['Bermasalah', '1', 'down']],
+      [{ k: 'n', label: 'Perangkat', w: '2fr', kind: 'sub' }, { k: 't', label: 'Tipe', w: '1.2fr' }, { k: 'o', label: 'Outlet', w: '1.2fr' }, { k: 'st', label: 'Status', w: '1fr', kind: 'badge' }, A],
+      [{ n: ['Terminal 01', 'Kasir depan'], t: 'POS Tablet', o: 'Kemang', st: ['Online', 'ok'] },
+       { n: ['Terminal 02', 'Kasir samping'], t: 'POS Tablet', o: 'Kemang', st: ['Online', 'ok'] },
+       { n: ['Printer Dapur', 'Thermal 80mm'], t: 'Printer', o: 'Kemang', st: ['Online', 'ok'] },
+       { n: ['Soundbox QRIS', 'Kasir depan'], t: 'Soundbox', o: 'Kemang', st: ['Offline', 'danger'] },
+       { n: ['KDS Dapur', 'Layar dapur'], t: 'Display', o: 'Kemang', st: ['Online', 'ok'] }]);
+
+    if (/outlet|denah|meja/.test(l)) return mk(
+      [['Total Outlet', '3', null], ['Aktif', '3', null], ['Meja', '42', null]],
+      [{ k: 'n', label: 'Outlet', w: '2fr', kind: 'sub' }, { k: 'k', label: 'Kode', w: '1fr', kind: 'mono' }, { k: 'a', label: 'Alamat', w: '2fr' }, { k: 'st', label: 'Status', w: '1fr', kind: 'badge' }, A],
+      [{ n: ['Outlet Kemang', 'Flagship'], k: 'WD-KMG', a: 'Jl. Kemang Raya No. 12', st: ['Aktif', 'ok'] },
+       { n: ['Outlet Senayan', 'Mall'], k: 'WD-SNY', a: 'Senayan City Lt. 3', st: ['Aktif', 'ok'] },
+       { n: ['Outlet BSD', 'Ruko'], k: 'WD-BSD', a: 'BSD Green Office Park', st: ['Aktif', 'ok'] }]);
+
+    if (/pesanan|order/.test(l)) return mk(
+      [['Pesanan Hari Ini', '184', 'up'], ['Diproses', '12', null], ['Selesai', '168', null]],
+      [{ k: 'no', label: 'No.', w: '1.2fr', kind: 'mono' }, { k: 'tp', label: 'Tipe', w: '1.2fr', kind: 'badge' }, { k: 'i', label: 'Item', w: '0.8fr', align: 'right', kind: 'mono' }, { k: 'n', label: 'Total', w: '1.2fr', align: 'right', kind: 'mono' }, { k: 'st', label: 'Status', w: '1.1fr', kind: 'badge' }, { k: 'w', label: 'Waktu', w: '1fr', align: 'right', kind: 'mono' }, A],
+      [{ no: 'TRX-0429', tp: ['Dine-in', 'gold'], i: '3', n: rp(94600), st: ['Selesai', 'ok'], w: '2 mnt' },
+       { no: 'TRX-0428', tp: ['Takeaway', 'warn'], i: '5', n: rp(128000), st: ['Diproses', 'info'], w: '11 mnt' },
+       { no: 'TRX-0427', tp: ['GoFood', 'ok'], i: '2', n: rp(46000), st: ['Selesai', 'ok'], w: '18 mnt' },
+       { no: 'TRX-0426', tp: ['Dine-in', 'gold'], i: '8', n: rp(212400), st: ['Diproses', 'info'], w: '25 mnt' },
+       { no: 'TRX-0425', tp: ['Dine-in', 'gold'], i: '4', n: rp(71000), st: ['Selesai', 'ok'], w: '32 mnt' }]);
+
+    if (/buku kas|transfer|kas & bank/.test(l)) return mk(
+      [['Saldo Kas', 'Rp 8,4 jt', null], ['Masuk Hari Ini', 'Rp 4,8 jt', 'up'], ['Keluar Hari Ini', 'Rp 1,2 jt', 'down']],
+      [{ k: 'd', label: 'Tanggal', w: '1.1fr', kind: 'mono' }, { k: 'ket', label: 'Keterangan', w: '2fr', kind: 'sub' }, { k: 'akun', label: 'Akun', w: '1.2fr' }, { k: 'n', label: 'Nominal', w: '1.2fr', align: 'right', kind: 'mono' }, { k: 'st', label: 'Arah', w: '1fr', kind: 'badge' }, A],
+      [{ d: '18/07/26', ket: ['Setoran kas shift pagi', 'Kasir Sinta'], akun: 'Kas Utama', n: rp(4800000), st: ['Masuk', 'ok'] },
+       { d: '18/07/26', ket: ['Pembelian bahan', 'CV Sumber Ayam'], akun: 'Kas Utama', n: rp(1200000), st: ['Keluar', 'danger'] },
+       { d: '17/07/26', ket: ['Transfer ke Bank BCA', 'Setoran harian'], akun: 'Bank BCA', n: rp(6000000), st: ['Transfer', 'info'] },
+       { d: '17/07/26', ket: ['Kembalian tambahan', 'Modal receh'], akun: 'Kas Utama', n: rp(500000), st: ['Masuk', 'ok'] }]);
+
+    return mk(
+      [['Total Data', '128', null], ['Aktif', '112', null], ['Nonaktif', '16', null]],
+      [{ k: 'n', label: 'Nama', w: '2fr', kind: 'sub' }, { k: 'ket', label: 'Keterangan', w: '2fr' }, { k: 'd', label: 'Diperbarui', w: '1.2fr', kind: 'mono' }, { k: 'st', label: 'Status', w: '1fr', kind: 'badge' }, A],
+      [{ n: [label + ' 01', 'Contoh entri'], ket: 'Data ' + l, d: '18/07/26', st: ['Aktif', 'ok'] },
+       { n: [label + ' 02', 'Contoh entri'], ket: 'Data ' + l, d: '17/07/26', st: ['Aktif', 'ok'] },
+       { n: [label + ' 03', 'Contoh entri'], ket: 'Data ' + l, d: '15/07/26', st: ['Nonaktif', 'neutral'] },
+       { n: [label + ' 04', 'Contoh entri'], ket: 'Data ' + l, d: '12/07/26', st: ['Aktif', 'ok'] }]);
+  }
+
+  renderVals() {
+    const h = React.createElement;
+    const period = this.state.period;
+
+    const periods = ['Hari ini', 'Minggu ini', 'Bulan ini'];
+    const periodBtns = periods.map(p => h('button', {
+      key: p, onClick: () => this.setState({ period: p }),
+      style: {
+        height: '38px', padding: '0 16px', borderRadius: '10px', fontFamily: 'inherit', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer', transition: 'all .12s',
+        border: period === p ? 'none' : '1px solid rgba(35,32,31,0.12)',
+        background: period === p ? '#23201F' : '#fff',
+        color: period === p ? '#fff' : 'rgba(35,32,31,0.6)',
+      },
+    }, p));
+
+    const maxV = Math.max(...this.CHART.map(c => c[1]));
+    const chartBars = h(React.Fragment, {}, this.CHART.map(([day, v], i) => {
+      const peak = v === maxV;
+      return h('div', { key: day, style: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', height: '100%', justifyContent: 'flex-end' } },
+        h('div', { style: { fontFamily: "'JetBrains Mono',monospace", fontSize: '10.5px', fontWeight: 700, color: peak ? '#A91F34' : 'rgba(35,32,31,0.4)' } }, v.toFixed(1) + 'jt'),
+        h('div', { style: { width: '100%', maxWidth: '38px', height: (v / maxV * 100) + '%', minHeight: '6px', borderRadius: '8px 8px 4px 4px', background: peak ? '#A91F34' : '#F3C6CD', transformOrigin: 'bottom', animation: 'wd-grow .5s ease ' + (i * 0.05) + 's both' } }),
+        h('div', { style: { fontSize: '11px', fontWeight: 600, color: 'rgba(35,32,31,0.5)' } }, day),
+      );
+    }));
+
+    const payRows = h(React.Fragment, {}, this.PAY.map(([name, pct, color]) => h('div', { key: name },
+      h('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12.5px', marginBottom: '6px' } },
+        h('span', { style: { fontWeight: 600 } }, name),
+        h('span', { style: { fontFamily: "'JetBrains Mono',monospace", fontWeight: 700, color } }, pct + '%')),
+      h('div', { style: { height: '8px', borderRadius: '999px', background: '#F1EEEA', overflow: 'hidden' } },
+        h('div', { style: { width: pct + '%', height: '100%', borderRadius: '999px', background: color } })),
+    )));
+
+    const stockBadge = (tone, stock) => {
+      const map = { ok: ['#EDF7F1', '#238152'], low: ['#FFF7E9', '#C67A15'], out: ['#F1EEEA', '#5A4B4D'] };
+      const [bg, col] = map[tone];
+      return h('span', { style: { fontSize: '11px', fontWeight: 700, padding: '3px 9px', borderRadius: '7px', background: bg, color: col, fontFamily: "'JetBrains Mono',monospace" } }, stock === 999 ? '∞' : String(stock));
+    };
+    const badgeTints = [['#FFF1F2', '#A91F34'], ['#FFF7E9', '#C67A15'], ['#EDF7F1', '#238152'], ['#EEF2FB', '#3A5BB0'], ['#F1EEEA', '#5A4B4D']];
+    const topProducts = this.TOP.map((t, i) => ({
+      name: t.name, sold: t.sold, rev: t.rev, initial: t.name.charAt(0),
+      badgeBg: badgeTints[i % badgeTints.length][0], badgeColor: badgeTints[i % badgeTints.length][1],
+      stockBadge: stockBadge(t.tone, t.stock),
+    }));
+
+    const recentTrx = this.RECENT.map(r => ({ ...r, iconEl: this.ic(r.ic, 17, 'currentColor', 1.6) }));
+
+    return {
+      nav: this.renderNav(),
+      activeTitle: this.state.active,
+      isDashboard: this.state.active === 'Dashboard Penjualan',
+      pageEl: this.renderPageEl(),
+      periodBtns, chartBars, payRows, topProducts, recentTrx,
+      bellIcon: this.ic('bell', 17, 'rgba(35,32,31,0.6)'),
+      chevronDown: this.ic('chevronDown', 15, 'currentColor', 2),
+      icWallet: this.ic('wallet', 17, 'currentColor'),
+      icReceipt: this.ic('receiptSm', 17, 'currentColor'),
+      icCube: this.ic('cube', 17, 'currentColor'),
+      icUsers: this.ic('customer', 17, 'currentColor'),
+    };
+  }
+}
+</script>
+</body>
+</html>

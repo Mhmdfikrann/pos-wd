@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body { background: #FFF9F2; color: #2D2022; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; -webkit-font-smoothing: antialiased; letter-spacing: -0.006em; overflow: hidden; }
+  a { color: #A91F34; text-decoration: none; }
+  a:hover { color: #7F1628; }
+  input { font-family: inherit; }
+  ::selection { background: #FFD84D; color: #2D2022; }
+  @keyframes wd-blink { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+  @keyframes wd-pop { 0% { transform: scale(.9); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+  @keyframes wd-slideup { from { transform: translateY(14px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  @keyframes wd-fade { from { opacity: 0; } to { opacity: 1; } }
+  .wd-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+  .wd-scroll::-webkit-scrollbar-thumb { background: rgba(45,32,34,0.16); border-radius: 8px; }
+  .wd-scroll::-webkit-scrollbar-track { background: transparent; }
+</style>
+</helmet>
+
+<div data-screen-label="Kasir" style="height:100vh;display:flex;flex-direction:column;background:#FFF9F2;">
+
+  <!-- ===== HEADER ===== -->
+  <div style="height:64px;flex-shrink:0;display:flex;align-items:center;gap:16px;padding:0 20px;background:#fff;border-bottom:1px solid rgba(45,32,34,0.08);">
+    <div style="display:flex;align-items:center;gap:11px;flex-shrink:0;">
+      <div style="width:40px;height:40px;border-radius:9px;background:#fff;border:1px solid rgba(45,32,34,0.08);display:flex;align-items:center;justify-content:center;overflow:hidden;">
+        <img src="assets/logo-icon.jpg" alt="Wanna Dimsum" style="width:36px;height:36px;object-fit:contain;" />
+      </div>
+      <div style="line-height:1.05;">
+        <div style="font-size:13.5px;font-weight:800;"><span style="color:#A91F34;">WANNA</span> DIMSUM</div>
+        <div style="font-size:10.5px;color:rgba(45,32,34,0.5);font-weight:600;margin-top:2px;">{{ outletName }}</div>
+      </div>
+    </div>
+
+    <div style="position:relative;flex:1;max-width:460px;margin-left:6px;">
+      <span style="position:absolute;left:15px;top:50%;transform:translateY(-50%);display:flex;color:rgba(45,32,34,0.4);">{{ icSearch }}</span>
+      <input oninput="{{ onSearch }}" placeholder="Cari dimsum, paket, minuman… atau scan barcode" style="width:100%;height:44px;border:1.5px solid rgba(45,32,34,0.12);border-radius:10px;padding:0 14px 0 42px;font-size:14px;color:#2D2022;background:#FFF9F2;outline:none;" />
+    </div>
+
+    <div style="flex:1;"></div>
+
+    <span style="display:inline-flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;padding:8px 13px;border-radius:9px;background:#FFF4D6;color:#A9791F;">{{ icClock }}Shift · 4j 12m</span>
+    <span style="display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;padding:8px 13px;border-radius:9px;background:#E4F4EC;color:#238152;"><span style="width:8px;height:8px;border-radius:50%;background:#2E9D64;animation:wd-blink 1.6s infinite;"></span>Online</span>
+    <div style="width:1px;height:28px;background:rgba(45,32,34,0.1);"></div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div style="width:38px;height:38px;border-radius:50%;background:#FFD84D;color:#2D2022;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;">{{ cashierInitial }}</div>
+      <div style="line-height:1.15;">
+        <div style="font-size:12.5px;font-weight:700;">{{ cashierName }}</div>
+        <div style="font-size:10.5px;color:rgba(45,32,34,0.5);">Kasir · Terminal 01</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== BODY ===== -->
+  <div style="flex:1;display:flex;min-height:0;">
+
+    <!-- Category rail -->
+    <div class="wd-scroll" style="width:186px;flex-shrink:0;background:#fff;border-right:1px solid rgba(45,32,34,0.08);overflow-y:auto;padding:14px 12px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:rgba(45,32,34,0.4);padding:0 6px 10px;">Kategori</div>
+      {{ catList }}
+    </div>
+
+    <!-- Catalog -->
+    <div style="flex:1;min-width:0;display:flex;flex-direction:column;">
+      <div style="flex-shrink:0;display:flex;align-items:baseline;gap:12px;padding:16px 22px 12px;">
+        <div style="font-size:17px;font-weight:800;">{{ catTitle }}</div>
+        <div style="font-size:12.5px;color:rgba(45,32,34,0.5);font-family:'JetBrains Mono',monospace;">{{ resultCount }}</div>
+      </div>
+      <div class="wd-scroll" style="flex:1;overflow-y:auto;padding:4px 22px 22px;">
+        {{ productGrid }}
+      </div>
+    </div>
+
+    <!-- Order panel -->
+    <div style="width:410px;flex-shrink:0;background:#fff;border-left:1px solid rgba(45,32,34,0.08);display:flex;flex-direction:column;box-shadow:-18px 0 40px -34px rgba(127,22,40,0.5);">
+
+      <!-- Order header -->
+      <div style="flex-shrink:0;padding:16px 20px 14px;border-bottom:1px solid rgba(45,32,34,0.07);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:13px;">
+          <div style="display:flex;align-items:center;gap:9px;">
+            <span style="font-size:16px;font-weight:800;">Pesanan</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:rgba(45,32,34,0.5);">#TRX-0429</span>
+          </div>
+          <span style="font-size:12px;font-weight:700;background:#FFF4D6;color:#A9791F;padding:3px 10px;border-radius:999px;">{{ cartCount }} item</span>
+        </div>
+        {{ orderTypeTabs }}
+        <div style="display:flex;gap:9px;margin-top:11px;">
+          <div style="flex:1;display:flex;align-items:center;gap:8px;height:40px;padding:0 12px;border:1.5px solid rgba(45,32,34,0.12);border-radius:9px;background:#FFF9F2;">
+            <span style="font-size:11px;font-weight:700;color:rgba(45,32,34,0.45);text-transform:uppercase;letter-spacing:0.04em;">{{ slotLabel }}</span>
+            <span style="font-size:14px;font-weight:800;color:#A91F34;">{{ slotValue }}</span>
+          </div>
+          <div style="flex:1;display:flex;align-items:center;gap:8px;height:40px;padding:0 12px;border:1.5px solid rgba(45,32,34,0.12);border-radius:9px;background:#FFF9F2;">
+            <span style="font-size:11px;font-weight:700;color:rgba(45,32,34,0.45);text-transform:uppercase;letter-spacing:0.04em;">Tamu</span>
+            <span style="font-size:14px;font-weight:800;color:#2D2022;">2</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cart list -->
+      <div class="wd-scroll" style="flex:1;overflow-y:auto;">
+        {{ cartList }}
+      </div>
+
+      <!-- Totals + pay -->
+      <div style="flex-shrink:0;padding:16px 20px 18px;background:#FFF9F2;border-top:1px solid rgba(45,32,34,0.08);">
+        <div style="display:flex;justify-content:space-between;font-size:13px;color:rgba(45,32,34,0.6);margin-bottom:7px;"><span>Subtotal</span><span style="font-family:'JetBrains Mono',monospace;">{{ subtotalStr }}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;color:rgba(45,32,34,0.6);"><span>PPN 11%</span><span style="font-family:'JetBrains Mono',monospace;">{{ taxStr }}</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:11px;padding-top:11px;border-top:1.5px dashed rgba(45,32,34,0.15);">
+          <span style="font-size:15px;font-weight:800;">Total</span>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:700;color:#A91F34;">{{ totalStr }}</span>
+        </div>
+        <div style="display:flex;gap:9px;margin-top:15px;">
+          <button onclick="{{ onHold }}" style="flex:0 0 auto;height:54px;padding:0 18px;border-radius:10px;border:1.5px solid rgba(45,32,34,0.15);background:#fff;font-family:inherit;font-weight:700;font-size:14px;color:#2D2022;cursor:pointer;transition:all .15s;" style-hover="background:#FFF4D6;">Tahan</button>
+          <button onclick="{{ onPay }}" style="flex:1;height:54px;border-radius:10px;border:none;background:#FFD84D;color:#2D2022;font-family:inherit;font-weight:800;font-size:16px;cursor:pointer;transition:all .15s;box-shadow:0 12px 24px -12px rgba(233,154,34,0.8);display:flex;align-items:center;justify-content:center;gap:8px;" style-hover="background:#f5cc33;">{{ payLabel }}</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {{ modalEl }}
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1360,&quot;height&quot;:900},&quot;outletName&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Outlet Kemang&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;cashierName&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Sinta Dewi&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;taxPercent&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:11,&quot;min&quot;:0,&quot;max&quot;:15,&quot;step&quot;:1,&quot;unit&quot;:&quot;%&quot;,&quot;tsType&quot;:&quot;number&quot;}}">
+class Component extends DCLogic {
+  state = {
+    cat: 'all', query: '',
+    cart: { d1: 2, h1: 1, m1: 3 },
+    orderType: 'dinein',
+    modal: null, payMethod: 'tunai', cash: 0,
+    lastTotal: 0, lastCash: 0,
+  };
+
+  TAX = 0.11;
+
+  CATS = [
+    ['all', 'Semua'], ['dimsum', 'Dimsum'], ['kukus', 'Kukus'],
+    ['goreng', 'Goreng'], ['paket', 'Paket'], ['minuman', 'Minuman'], ['addon', 'Add-on'],
+  ];
+  CAT_TITLE = { all: 'Semua Menu', dimsum: 'Dimsum', kukus: 'Menu Kukus', goreng: 'Menu Goreng', paket: 'Paket Hemat', minuman: 'Minuman', addon: 'Add-on' };
+
+  PRODUCTS = [
+    { id: 'd1', name: 'Dimsum Ayam', price: 18000, cat: 'dimsum', stock: 'ok' },
+    { id: 'd2', name: 'Dimsum Ayam Keju', price: 22000, cat: 'dimsum', stock: 'ok' },
+    { id: 'd3', name: 'Siomay Ayam', price: 20000, cat: 'dimsum', stock: 'low' },
+    { id: 'd4', name: 'Ceker Dimsum', price: 24000, cat: 'dimsum', stock: 'ok' },
+    { id: 'h1', name: 'Hakau Udang', price: 24000, cat: 'kukus', stock: 'low' },
+    { id: 'h2', name: 'Xiao Long Bao', price: 28000, cat: 'kukus', stock: 'ok' },
+    { id: 'h3', name: 'Mantao Kukus', price: 16000, cat: 'kukus', stock: 'ok' },
+    { id: 'g1', name: 'Lumpia Udang', price: 20000, cat: 'goreng', stock: 'ok' },
+    { id: 'g2', name: 'Pangsit Goreng', price: 18000, cat: 'goreng', stock: 'ok' },
+    { id: 'g3', name: 'Lumpia Kulit Tahu', price: 20000, cat: 'goreng', stock: 'out' },
+    { id: 'p1', name: 'Paket Hemat A', price: 45000, cat: 'paket', stock: 'ok' },
+    { id: 'p2', name: 'Paket Berdua', price: 78000, cat: 'paket', stock: 'ok' },
+    { id: 'p3', name: 'Paket Keluarga', price: 145000, cat: 'paket', stock: 'ok' },
+    { id: 'm1', name: 'Es Teh Melati', price: 7000, cat: 'minuman', stock: 'ok' },
+    { id: 'm2', name: 'Es Jeruk', price: 10000, cat: 'minuman', stock: 'ok' },
+    { id: 'm3', name: 'Teh Tarik', price: 12000, cat: 'minuman', stock: 'ok' },
+    { id: 'm4', name: 'Air Mineral', price: 5000, cat: 'minuman', stock: 'ok' },
+    { id: 'a1', name: 'Saus XO', price: 8000, cat: 'addon', stock: 'ok' },
+    { id: 'a2', name: 'Sambal Extra', price: 3000, cat: 'addon', stock: 'ok' },
+    { id: 'a3', name: 'Kecap Asin', price: 2000, cat: 'addon', stock: 'ok' },
+  ];
+
+  ICONS = {
+    search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+    clock: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+    plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
+    minus: '<path d="M5 12h14"/>',
+    trash: '<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+    x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+    check: '<path d="M20 6 9 17l-5-5"/>',
+    dinein: '<path d="M3 11h18"/><path d="M12 11V4"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M6 20h12"/>',
+    takeaway: '<path d="M16 10a4 4 0 0 1-8 0"/><path d="M3.1 6h17.8"/><path d="M3.4 5.5a2 2 0 0 0-.4 1.2V20a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6.7a2 2 0 0 0-.4-1.2l-2-2.7A2 2 0 0 0 17 2H7a2 2 0 0 0-1.6.8z"/>',
+    delivery: '<path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.62l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/>',
+    cash: '<rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/>',
+    qris: '<rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/><path d="M14 14h3v3h-3z"/><path d="M20 14v7"/><path d="M14 20h3"/>',
+    card: '<rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/>',
+    wallet: '<path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/>',
+    printer: '<path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6"/><rect width="12" height="8" x="6" y="14" rx="1"/>',
+    bag: '<path d="M16 10a4 4 0 0 1-8 0"/><path d="M3.1 6h17.8"/><path d="M3.4 5.5a2 2 0 0 0-.4 1.2V20a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6.7a2 2 0 0 0-.4-1.2l-2-2.7A2 2 0 0 0 17 2H7a2 2 0 0 0-1.6.8z"/>',
+  };
+
+  ic(name, size, color, sw) {
+    return React.createElement('svg', { width: size || 18, height: size || 18, viewBox: '0 0 24 24', fill: 'none', stroke: color || 'currentColor', strokeWidth: sw || 2, strokeLinecap: 'round', strokeLinejoin: 'round', dangerouslySetInnerHTML: { __html: this.ICONS[name] || '' } });
+  }
+
+  fmt(n) { return 'Rp ' + Math.round(n).toLocaleString('id-ID'); }
+  prod(id) { return this.PRODUCTS.find(p => p.id === id); }
+
+  get taxRate() { const t = this.props.taxPercent; return (t == null ? 11 : t) / 100; }
+  get subtotal() { return Object.entries(this.state.cart).reduce((s, [id, q]) => s + this.prod(id).price * q, 0); }
+  get tax() { return this.subtotal * this.taxRate; }
+  get total() { return this.subtotal + this.tax; }
+  get cartCount() { return Object.values(this.state.cart).reduce((a, b) => a + b, 0); }
+
+  add(id) {
+    const p = this.prod(id); if (p.stock === 'out') return;
+    this.setState(s => ({ cart: { ...s.cart, [id]: (s.cart[id] || 0) + 1 } }));
+  }
+  dec(id) {
+    this.setState(s => {
+      const q = (s.cart[id] || 0) - 1; const c = { ...s.cart };
+      if (q <= 0) delete c[id]; else c[id] = q;
+      return { cart: c };
+    });
+  }
+  remove(id) { this.setState(s => { const c = { ...s.cart }; delete c[id]; return { cart: c }; }); }
+
+  openPay() { if (this.cartCount === 0) return; this.setState({ modal: 'pay', payMethod: 'tunai', cash: 0 }); }
+  closeModal() { this.setState({ modal: null }); }
+  appendCash(d) { this.setState(s => { const n = s.cash * 10 + d; return { cash: n > 99999999 ? s.cash : n }; }); }
+  confirmPay() {
+    if (this.state.payMethod === 'tunai' && this.state.cash < this.total) return;
+    const cash = this.state.payMethod === 'tunai' ? this.state.cash : this.total;
+    this.setState({ modal: 'done', lastTotal: this.total, lastCash: cash });
+  }
+  newTrx() { this.setState({ cart: {}, modal: null, cash: 0 }); }
+
+  renderCats() {
+    const h = React.createElement;
+    const counts = {}; this.PRODUCTS.forEach(p => { counts[p.cat] = (counts[p.cat] || 0) + 1; });
+    counts.all = this.PRODUCTS.length;
+    return h('div', { style: { display: 'flex', flexDirection: 'column', gap: '3px' } },
+      this.CATS.map(([key, label]) => {
+        const on = this.state.cat === key;
+        return h('button', {
+          key, onClick: () => this.setState({ cat: key }),
+          style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', textAlign: 'left', border: 'none', cursor: 'pointer', borderRadius: '10px', fontFamily: 'inherit', fontSize: '14px', fontWeight: on ? 800 : 600, padding: '11px 13px', color: on ? '#A91F34' : 'rgba(45,32,34,0.68)', background: on ? '#FFF1F2' : 'transparent', transition: 'all .12s' },
+          onMouseEnter: e => { if (!on) e.currentTarget.style.background = '#FFF9F2'; },
+          onMouseLeave: e => { if (!on) e.currentTarget.style.background = 'transparent'; },
+        },
+          h('span', null, label),
+          h('span', { style: { fontFamily: "'JetBrains Mono',monospace", fontSize: '11px', fontWeight: 700, color: on ? '#A91F34' : 'rgba(45,32,34,0.35)' } }, counts[key] || 0),
+        );
+      }));
+  }
+
+  renderGrid() {
+    const h = React.createElement;
+    const q = this.state.query.trim().toLowerCase();
+    let list = this.PRODUCTS.filter(p => (this.state.cat === 'all' || p.cat === this.state.cat) && (!q || p.name.toLowerCase().includes(q)));
+
+    if (list.length === 0) {
+      return h('div', { style: { textAlign: 'center', padding: '70px 20px', color: 'rgba(45,32,34,0.5)' } },
+        h('div', { style: { fontSize: '40px', marginBottom: '10px' } }, '\uD83D\uDD0D'),
+        h('div', { style: { fontSize: '15px', fontWeight: 700, color: '#2D2022' } }, 'Menu tidak ditemukan'),
+        h('div', { style: { fontSize: '13px', marginTop: '4px' } }, 'Coba kata kunci atau kategori lain.'),
+      );
+    }
+
+    const stockTag = { ok: ['Tersedia', '#2E9D64'], low: ['Menipis', '#E99A22'], out: ['Habis', '#5A4B4D'] };
+    return h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(168px, 1fr))', gap: '14px' } },
+      list.map(p => {
+        const out = p.stock === 'out';
+        const inCart = this.state.cart[p.id] || 0;
+        const [tagLabel, tagColor] = stockTag[p.stock];
+        return h('div', {
+          key: p.id, onClick: () => this.add(p.id),
+          style: { position: 'relative', border: inCart ? '1.5px solid #A91F34' : '1px solid rgba(45,32,34,0.08)', borderRadius: '12px', overflow: 'hidden', background: '#fff', cursor: out ? 'not-allowed' : 'pointer', opacity: out ? 0.5 : 1, transition: 'all .15s', boxShadow: inCart ? '0 10px 26px -16px rgba(127,22,40,0.6)' : 'none' },
+          onMouseEnter: e => { if (!out) { e.currentTarget.style.boxShadow = '0 14px 30px -18px rgba(127,22,40,0.5)'; e.currentTarget.style.transform = 'translateY(-2px)'; } },
+          onMouseLeave: e => { e.currentTarget.style.boxShadow = inCart ? '0 10px 26px -16px rgba(127,22,40,0.6)' : 'none'; e.currentTarget.style.transform = 'none'; },
+        },
+          h('div', { style: { height: '92px', background: out ? 'repeating-linear-gradient(45deg,#EFEAEA,#EFEAEA 8px,#E5DEDE 8px,#E5DEDE 16px)' : 'repeating-linear-gradient(45deg,#FFF4D6,#FFF4D6 8px,#FDEBBE 8px,#FDEBBE 16px)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' } },
+            h('span', { style: { fontFamily: "'JetBrains Mono',monospace", fontSize: '9px', color: 'rgba(45,32,34,0.4)' } }, 'foto produk'),
+            h('span', { style: { position: 'absolute', top: '8px', left: '8px', fontSize: '10px', fontWeight: 700, padding: '3px 8px', borderRadius: '5px', background: tagColor, color: '#fff' } }, tagLabel),
+            inCart ? h('span', { style: { position: 'absolute', top: '8px', right: '8px', minWidth: '22px', height: '22px', padding: '0 6px', borderRadius: '999px', background: '#A91F34', color: '#fff', fontFamily: "'JetBrains Mono',monospace", fontSize: '12px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'wd-pop .18s ease' } }, inCart) : null,
+          ),
+          h('div', { style: { padding: '11px 12px 13px' } },
+            h('div', { style: { fontSize: '13.5px', fontWeight: 700, lineHeight: 1.25, minHeight: '34px' } }, p.name),
+            h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '4px' } },
+              h('span', { style: { fontFamily: "'JetBrains Mono',monospace", fontSize: '13px', fontWeight: 600, color: out ? 'rgba(45,32,34,0.5)' : '#A91F34' } }, this.fmt(p.price)),
+              out ? null : h('span', { style: { width: '28px', height: '28px', borderRadius: '8px', background: '#A91F34', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' } }, this.ic('plus', 15, '#fff', 2.4)),
+            ),
+          ),
+        );
+      }));
+  }
+
+  renderOrderTabs() {
+    const h = React.createElement;
+    const tabs = [['dinein', 'Dine-in', 'dinein'], ['takeaway', 'Takeaway', 'takeaway'], ['delivery', 'Delivery', 'delivery']];
+    return h('div', { style: { display: 'flex', gap: '6px', background: '#FFF9F2', padding: '4px', borderRadius: '11px', border: '1px solid rgba(45,32,34,0.08)' } },
+      tabs.map(([key, label, icon]) => {
+        const on = this.state.orderType === key;
+        return h('button', {
+          key, onClick: () => this.setState({ orderType: key }),
+          style: { flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px', height: '40px', border: 'none', borderRadius: '8px', cursor: 'pointer', fontFamily: 'inherit', fontSize: '13px', fontWeight: 700, background: on ? '#A91F34' : 'transparent', color: on ? '#fff' : 'rgba(45,32,34,0.6)', transition: 'all .15s', boxShadow: on ? '0 8px 16px -10px rgba(127,22,40,0.7)' : 'none' },
+        }, this.ic(icon, 16, 'currentColor', 2), label);
+      }));
+  }
+
+  renderCart() {
+    const h = React.createElement;
+    const entries = Object.entries(this.state.cart);
+    if (entries.length === 0) {
+      return h('div', { style: { height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '30px', textAlign: 'center' } },
+        h('div', { style: { width: '72px', height: '72px', borderRadius: '16px', background: '#FFF4D6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '34px', marginBottom: '14px' } }, '\uD83E\uDD5F'),
+        h('div', { style: { fontSize: '15px', fontWeight: 700 } }, 'Keranjang masih kosong'),
+        h('div', { style: { fontSize: '13px', color: 'rgba(45,32,34,0.55)', marginTop: '5px', maxWidth: '22ch' } }, 'Ketuk menu di sebelah kiri untuk menambah pesanan.'),
+      );
+    }
+    return h('div', { style: { padding: '6px 18px 10px' } },
+      entries.map(([id, qty]) => {
+        const p = this.prod(id);
+        return h('div', { key: id, style: { display: 'flex', gap: '11px', padding: '13px 0', borderBottom: '1px solid rgba(45,32,34,0.07)', animation: 'wd-fade .2s ease' } },
+          h('div', { style: { flex: 1, minWidth: 0 } },
+            h('div', { style: { fontSize: '14px', fontWeight: 700 } }, p.name),
+            h('div', { style: { fontFamily: "'JetBrains Mono',monospace", fontSize: '12px', color: 'rgba(45,32,34,0.5)', marginTop: '2px' } }, this.fmt(p.price) + ' / porsi'),
+            h('div', { style: { display: 'flex', alignItems: 'center', gap: '10px', marginTop: '9px' } },
+              h('button', { onClick: () => this.dec(id), style: { width: '32px', height: '32px', borderRadius: '8px', border: '1.5px solid rgba(45,32,34,0.15)', background: '#fff', color: '#A91F34', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' } }, this.ic(qty === 1 ? 'trash' : 'minus', 15, '#A91F34', 2.2)),
+              h('span', { style: { fontFamily: "'JetBrains Mono',monospace", fontSize: '16px', fontWeight: 700, minWidth: '22px', textAlign: 'center' } }, qty),
+              h('button', { onClick: () => this.add(id), style: { width: '32px', height: '32px', borderRadius: '8px', border: 'none', background: '#A91F34', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' } }, this.ic('plus', 15, '#fff', 2.4)),
+            ),
+          ),
+          h('div', { style: { textAlign: 'right', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', alignItems: 'flex-end' } },
+            h('div', { style: { fontFamily: "'JetBrains Mono',monospace", fontSize: '14px', fontWeight: 700 } }, this.fmt(p.price * qty)),
+            h('button', { onClick: () => this.remove(id), 'aria-label': 'Hapus', style: { border: 'none', background: 'none', cursor: 'pointer', color: 'rgba(45,32,34,0.35)', padding: '4px', display: 'flex' }, onMouseEnter: e => e.currentTarget.style.color = '#D64545', onMouseLeave: e => e.currentTarget.style.color = 'rgba(45,32,34,0.35)' }, this.ic('trash', 16, 'currentColor', 2)),
+          ),
+        );
+      }));
+  }
+
+  renderModal() {
+    const h = React.createElement;
+    if (!this.state.modal) return null;
+    const overlay = (child) => h('div', {
+      onClick: () => this.closeModal(),
+      style: { position: 'fixed', inset: 0, background: 'rgba(45,32,34,0.5)', backdropFilter: 'blur(3px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, animation: 'wd-fade .15s ease' },
+    }, child);
+
+    if (this.state.modal === 'done') {
+      const change = this.state.lastCash - this.state.lastTotal;
+      return overlay(h('div', { onClick: e => e.stopPropagation(), style: { width: '420px', background: '#fff', borderRadius: '18px', padding: '36px 34px 30px', textAlign: 'center', animation: 'wd-slideup .25s ease', boxShadow: '0 40px 80px -30px rgba(127,22,40,0.5)' } },
+        h('div', { style: { width: '72px', height: '72px', borderRadius: '50%', background: '#E4F4EC', color: '#2E9D64', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px', animation: 'wd-pop .3s ease' } }, this.ic('check', 36, '#2E9D64', 2.6)),
+        h('div', { style: { fontSize: '20px', fontWeight: 800 } }, 'Pembayaran Berhasil'),
+        h('div', { style: { fontSize: '13.5px', color: 'rgba(45,32,34,0.55)', marginTop: '5px' } }, 'Transaksi #TRX-0429 tercatat.'),
+        h('div', { style: { background: '#FFF9F2', border: '1px solid rgba(45,32,34,0.08)', borderRadius: '12px', padding: '16px 18px', marginTop: '20px', textAlign: 'left' } },
+          h('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'rgba(45,32,34,0.6)', marginBottom: '7px' } }, h('span', null, 'Total'), h('span', { style: { fontFamily: "'JetBrains Mono',monospace", fontWeight: 700, color: '#2D2022' } }, this.fmt(this.state.lastTotal))),
+          h('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'rgba(45,32,34,0.6)', marginBottom: '7px' } }, h('span', null, 'Tunai'), h('span', { style: { fontFamily: "'JetBrains Mono',monospace" } }, this.fmt(this.state.lastCash))),
+          h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', paddingTop: '9px', borderTop: '1px dashed rgba(45,32,34,0.15)' } }, h('span', { style: { fontSize: '14px', fontWeight: 800 } }, 'Kembalian'), h('span', { style: { fontFamily: "'JetBrains Mono',monospace", fontSize: '20px', fontWeight: 700, color: '#2E9D64' } }, this.fmt(Math.max(0, change)))),
+        ),
+        h('div', { style: { display: 'flex', gap: '10px', marginTop: '20px' } },
+          h('button', { onClick: () => this.newTrx(), style: { flex: 1, height: '50px', borderRadius: '10px', border: '1.5px solid rgba(45,32,34,0.15)', background: '#fff', fontFamily: 'inherit', fontWeight: 700, fontSize: '14px', color: '#2D2022', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' } }, this.ic('printer', 17, 'currentColor', 2), 'Cetak Struk'),
+          h('button', { onClick: () => this.newTrx(), style: { flex: 1, height: '50px', borderRadius: '10px', border: 'none', background: '#A91F34', color: '#fff', fontFamily: 'inherit', fontWeight: 800, fontSize: '14px', cursor: 'pointer' } }, 'Transaksi Baru'),
+        ),
+      ));
+    }
+
+    // pay modal
+    const methods = [['tunai', 'Tunai', 'cash'], ['qris', 'QRIS', 'qris'], ['debit', 'Kartu', 'card'], ['ewallet', 'E-Wallet', 'wallet']];
+    const isCash = this.state.payMethod === 'tunai';
+    const change = this.state.cash - this.total;
+    const canPay = !isCash || this.state.cash >= this.total;
+    const quick = [['Uang Pas', this.total], ['50rb', 50000], ['100rb', 100000], ['150rb', 150000]];
+    const keypad = [1,2,3,4,5,6,7,8,9,'C',0,'back'];
+
+    let changeEl;
+    if (this.state.cash === 0) changeEl = h('div', { style: { fontSize: '12.5px', fontWeight: 700, color: 'rgba(45,32,34,0.4)', marginTop: '4px' } }, 'Masukkan nominal uang diterima');
+    else if (change < 0) changeEl = h('div', { style: { fontSize: '13px', fontWeight: 700, color: '#D64545', marginTop: '4px' } }, 'Kurang ' + this.fmt(-change));
+    else changeEl = h('div', { style: { fontSize: '13px', fontWeight: 700, color: '#2E9D64', marginTop: '4px' } }, 'Kembali ' + this.fmt(change));
+
+    return overlay(h('div', { onClick: e => e.stopPropagation(), style: { width: isCash ? '760px' : '440px', background: '#fff', borderRadius: '18px', overflow: 'hidden', animation: 'wd-slideup .25s ease', boxShadow: '0 40px 80px -30px rgba(127,22,40,0.5)' } },
+      h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 22px', borderBottom: '1px solid rgba(45,32,34,0.08)' } },
+        h('div', { style: { fontSize: '17px', fontWeight: 800 } }, 'Pembayaran'),
+        h('button', { onClick: () => this.closeModal(), style: { border: 'none', background: '#FFF9F2', width: '34px', height: '34px', borderRadius: '9px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(45,32,34,0.6)' } }, this.ic('x', 18, 'currentColor', 2.2)),
+      ),
+      h('div', { style: { display: 'flex' } },
+        // left: methods + total
+        h('div', { style: { width: isCash ? '320px' : '100%', padding: '20px 22px', borderRight: isCash ? '1px solid rgba(45,32,34,0.08)' : 'none' } },
+          h('div', { style: { background: '#2D2022', color: '#fff', borderRadius: '13px', padding: '18px 20px', marginBottom: '20px' } },
+            h('div', { style: { fontSize: '12px', color: 'rgba(255,255,255,0.6)', fontWeight: 600 } }, 'Total Tagihan'),
+            h('div', { style: { fontFamily: "'JetBrains Mono',monospace", fontSize: '30px', fontWeight: 700, marginTop: '3px' } }, this.fmt(this.total)),
+            h('div', { style: { fontSize: '11.5px', color: 'rgba(255,255,255,0.5)', marginTop: '2px' } }, this.cartCount + ' item · sudah termasuk PPN'),
+          ),
+          h('div', { style: { fontSize: '12px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'rgba(45,32,34,0.42)', marginBottom: '11px' } }, 'Metode Bayar'),
+          h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '9px' } },
+            methods.map(([key, label, icon]) => {
+              const on = this.state.payMethod === key;
+              return h('button', { key, onClick: () => this.setState({ payMethod: key, cash: 0 }), style: { display: 'flex', alignItems: 'center', gap: '9px', height: '48px', padding: '0 13px', borderRadius: '10px', cursor: 'pointer', fontFamily: 'inherit', fontSize: '13.5px', fontWeight: 700, border: on ? '1.5px solid #A91F34' : '1.5px solid rgba(45,32,34,0.12)', background: on ? '#FFF1F2' : '#fff', color: on ? '#A91F34' : 'rgba(45,32,34,0.7)', transition: 'all .12s' } }, this.ic(icon, 18, 'currentColor', 2), label);
+            }),
+          ),
+          !isCash ? h('div', { style: { marginTop: '20px', textAlign: 'center', padding: '20px', background: '#FFF9F2', borderRadius: '12px', border: '1px dashed rgba(45,32,34,0.18)' } },
+            h('div', { style: { fontSize: '13.5px', fontWeight: 700 } }, 'Menunggu pembayaran'),
+            h('div', { style: { fontSize: '12.5px', color: 'rgba(45,32,34,0.55)', marginTop: '4px' } }, 'Arahkan pelanggan menyelesaikan pembayaran via ' + this.state.payMethod.toUpperCase() + '.'),
+          ) : null,
+          h('button', { onClick: () => this.confirmPay(), disabled: !canPay, style: { width: '100%', height: '54px', marginTop: '20px', borderRadius: '11px', border: 'none', background: canPay ? '#FFD84D' : 'rgba(45,32,34,0.12)', color: canPay ? '#2D2022' : 'rgba(45,32,34,0.4)', fontFamily: 'inherit', fontWeight: 800, fontSize: '16px', cursor: canPay ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: canPay ? '0 12px 24px -12px rgba(233,154,34,0.8)' : 'none' } }, this.ic('check', 19, 'currentColor', 2.4), 'Konfirmasi Bayar'),
+        ),
+        // right: keypad (cash only)
+        isCash ? h('div', { style: { flex: 1, padding: '20px 22px' } },
+          h('div', { style: { background: '#FFF9F2', border: '1.5px solid rgba(45,32,34,0.12)', borderRadius: '11px', padding: '14px 16px', marginBottom: '13px' } },
+            h('div', { style: { fontSize: '12px', color: 'rgba(45,32,34,0.5)', fontWeight: 600 } }, 'Uang Diterima'),
+            h('div', { style: { fontFamily: "'JetBrains Mono',monospace", fontSize: '28px', fontWeight: 700, marginTop: '2px' } }, this.state.cash === 0 ? 'Rp 0' : this.fmt(this.state.cash)),
+            changeEl,
+          ),
+          h('div', { style: { display: 'flex', gap: '8px', marginBottom: '13px' } },
+            quick.map(([label, amt]) => h('button', { key: label, onClick: () => this.setState({ cash: amt }), style: { flex: 1, height: '40px', borderRadius: '8px', border: '1.5px solid rgba(45,32,34,0.12)', background: '#fff', fontFamily: 'inherit', fontWeight: 700, fontSize: '12px', color: '#2D2022', cursor: 'pointer' } }, label)),
+          ),
+          h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '9px' } },
+            keypad.map(k => {
+              if (k === 'C') return h('button', { key: k, onClick: () => this.setState({ cash: 0 }), style: { height: '54px', borderRadius: '9px', border: '1.5px solid rgba(214,69,69,0.3)', background: '#FBE7E7', color: '#B83636', fontFamily: 'inherit', fontSize: '15px', fontWeight: 700, cursor: 'pointer' } }, 'C');
+              if (k === 'back') return h('button', { key: k, onClick: () => this.setState(s => ({ cash: Math.floor(s.cash / 10) })), style: { height: '54px', borderRadius: '9px', border: '1.5px solid rgba(45,32,34,0.1)', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2D2022' } }, '\u232B');
+              return h('button', { key: k, onClick: () => this.appendCash(k), style: { height: '54px', borderRadius: '9px', border: '1.5px solid rgba(45,32,34,0.1)', background: '#fff', fontFamily: "'JetBrains Mono',monospace", fontSize: '21px', fontWeight: 700, color: '#2D2022', cursor: 'pointer', transition: 'all .1s' }, onMouseDown: e => e.currentTarget.style.background = '#FFD84D', onMouseUp: e => e.currentTarget.style.background = '#fff', onMouseLeave: e => e.currentTarget.style.background = '#fff' }, k);
+            }),
+          ),
+        ) : null,
+      ),
+    ));
+  }
+
+  renderVals() {
+    const otMap = { dinein: ['Meja', 'A-12'], takeaway: ['Antrean', 'T-07'], delivery: ['Order', 'GF-231'] };
+    const [slotLabel, slotValue] = otMap[this.state.orderType];
+    const q = this.state.query.trim().toLowerCase();
+    const count = this.PRODUCTS.filter(p => (this.state.cat === 'all' || p.cat === this.state.cat) && (!q || p.name.toLowerCase().includes(q))).length;
+
+    return {
+      outletName: this.props.outletName ?? 'Outlet Kemang',
+      cashierName: this.props.cashierName ?? 'Sinta Dewi',
+      cashierInitial: (this.props.cashierName ?? 'Sinta Dewi').charAt(0),
+      icSearch: this.ic('search', 18, 'currentColor', 2),
+      icClock: this.ic('clock', 15, 'currentColor', 2),
+      onSearch: (e) => this.setState({ query: e.target.value }),
+      catList: this.renderCats(),
+      catTitle: this.CAT_TITLE[this.state.cat],
+      resultCount: count + ' menu',
+      productGrid: this.renderGrid(),
+      orderTypeTabs: this.renderOrderTabs(),
+      cartList: this.renderCart(),
+      cartCount: this.cartCount,
+      slotLabel, slotValue,
+      subtotalStr: this.fmt(this.subtotal),
+      taxStr: this.fmt(this.tax),
+      totalStr: this.fmt(this.total),
+      payLabel: this.cartCount === 0 ? 'Pilih Menu' : 'Bayar ' + this.fmt(this.total),
+      onPay: () => this.openPay(),
+      onHold: () => {},
+      modalEl: this.renderModal(),
+    };
+  }
+}
+</script>
+</body>
+</html>

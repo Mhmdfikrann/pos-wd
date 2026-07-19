@@ -1,0 +1,367 @@
+# Struktur Menu Sidebar Majoo — Versi Rapi
+
+Dokumen ini menyusun ulang menu Majoo menjadi hierarki **menu utama → submenu → halaman turunan** agar lebih mudah digunakan sebagai referensi sidebar, sitemap, PRD, atau arsitektur route.
+
+## Hasil Analisis
+
+- Kandidat halaman/menu pada sumber: **358**
+- Struktur unik setelah duplikasi digabung: **350**
+- Duplikasi yang dihapus: **8**
+- Halaman teknis dan route dinamis pada lampiran tidak dimasukkan karena bukan menu sidebar utama.
+- URL route sengaja tidak ditampilkan agar struktur lebih mudah dibaca.
+- Menu aktual Majoo dapat berbeda bergantung pada paket, role pengguna, outlet, dan add-on.
+
+Duplikasi yang digabung meliputi: Penjualan Outlet, Laporan Reservasi, Laporan Ringkasan Persediaan, Laporan Settlement, Basic, Pengaturan Reservasi, Pengaturan Uang Muka, Daftar Akun.
+
+## Struktur Sidebar Lengkap
+
+- **Laporan**
+  - Analisa Laporan
+    - Kepuasan Pelanggan
+    - Waktu Teramai Penjualan
+    - Waktu Teramai Produk
+    - Perputaran Stok
+    - Analisa Penjualan Produk Per Periode
+    - Analisa Tingkat Konversi Penjualan
+    - Laporan Pendapatan & Uang Masuk Harian
+  - Laporan Penjualan
+    - Penjualan Outlet
+    - Ringkasan Penjualan
+    - Penjualan Per Terminal
+    - Laporan Per Kasir
+    - Penjualan Kategori
+    - Penjualan Departemen
+    - Penjualan Produk
+    - Penjualan Ekstra
+    - Penjualan Sub Ekstra
+    - Deposit Kedaluwarsa
+    - Penjualan Deposit
+    - Sisa Deposit
+    - Penjualan per Periode
+    - Laporan Promo
+    - Laporan Jenis Bayar
+    - Laporan Jenis Order
+    - Laporan Serial Number
+    - Laporan Batch Number
+    - Laporan Komplimen
+    - Laporan Refund
+    - Laporan Uang Muka
+    - Laporan Reservasi
+      - Detail Utilisasi
+    - Laporan Jasa
+    - Laporan Pajak
+    - Laporan Service Charge
+    - Laporan Void
+    - Laporan Pelanggan
+    - Detail Penjualan
+    - Laporan Tutup Kasir
+    - Laporan Tutup Toko
+    - Laporan Poin
+      - Laporan Poin Detail
+    - Laporan Kupon
+    - Laporan Kas Kasir
+    - Laporan Reservasi Fasilitas
+    - Laporan Utilisasi Ruangan
+  - Laporan Dapur
+    - Laporan Waktu Proses Order
+    - Laporan Waktu Proses Produk
+    - Laporan Riwayat Kembalikan Status
+  - Laporan Karyawan
+    - Absensi
+    - Laporan Komisi Tetap
+      - Ringkasan Laporan
+    - Laporan Komisi Bertingkat
+      - Ringkasan Laporan
+  - Laporan Persediaan
+    - Laporan Ringkasan Persediaan
+    - Laporan Stok Kedaluwarsa
+    - Laporan Detail Persediaan
+  - Laporan Settlement
+    - Order Online
+    - Detail Dana Ditahan
+    - Detail Saldo
+    - Detail Saldo Pelanggan
+- **Inventori**
+  - Kelola Stok
+    - Daftar Stok
+    - Faktur Pembelian
+    - Produksi Stok
+      - Daftar Produksi Stok
+      - Template Produksi Stok
+    - Stok Opname
+    - Stok Terbuang
+  - Pembelian Stok
+    - Daftar Pemasok
+    - Pemesanan Stok
+    - Pengiriman Pembelian
+    - Permintaan Barang
+  - Mutasi Antar Outlet
+    - Permintaan Stok
+    - Stok Harus Dikirim
+    - Kirim Stok
+    - Terima Mutasi Stok
+    - Stok Transit
+  - Retur
+    - Retur Pembelian
+    - Rekonsiliasi Retur
+  - Daftar Bahan Baku
+- **Pengaturan Bisnis**
+  - Daftar Outlet
+  - Grup Outlet
+  - Pengaturan Notifikasi Dashboard
+  - Notifikasi
+  - Akses Support
+  - Kirim Notifikasi Perubahan
+  - Kirim Notifikasi Stok Kadaluwarsa
+  - Notifikasi Reservasi
+  - Notifikasi Laporan Tutup Kasir
+  - Notifikasi Laporan Penjualan Per Jam
+  - Notifikasi Laporan Absensi
+  - Notifikasi Absensi
+  - Notifikasi Perubahan Data
+  - Notifikasi Stok Kedaluwarsa
+  - Notifikasi Struk Pembayaran
+  - Notifikasi Poin
+  - Notifikasi Deposit
+  - Pengaturan Denah dan Meja
+- **Promosi**
+  - Kupon Diskon
+    - Kupon Campaign
+    - Kupon List
+  - Promo
+    - Advance
+    - Basic
+    - Per Total Pembelian
+    - Per Produk
+  - Poin Reward
+    - Per Total Pembelian
+    - Per Produk
+    - Penukaran Poin
+  - Loyalty
+    - Loyalty Program
+    - Daftar Loyalty
+    - Group Loyalty Pelanggan
+- **Produk**
+  - Buku Menu
+  - Daftar Layanan
+  - Daftar Kategori
+  - Produk Ekstra
+  - Daftar Departemen
+  - Penjadwalan Perubahan Resep
+  - Deposit
+  - Daftar Harga Ojek Online
+  - Daftar Penjadwalan Harga
+  - Cetak Barcode
+  - Produk Paket
+  - Daftar Kategori Catatan
+  - Master Resep
+  - Harga Berdasarkan Waktu
+  - Produk Fasilitas
+- **WAB Customer Care**
+  - Pengaturan Inbox
+  - Pengaturan Pengguna
+  - Pengaturan Agen AI
+  - Billing AI
+  - Riwayat Penggunaan
+  - Detail Kredit AI
+  - Detail Kredit Broadcast
+  - Template Management
+  - Broadcast
+- **Laporan Keuangan**
+  - Laporan Laba Rugi
+  - Laporan Buku Besar
+  - Laporan Jurnal
+  - Laporan Neraca
+  - Laporan Arus Kas
+  - Laporan Hutang
+  - Laporan Piutang
+  - Laporan Keuangan - Konsultan
+- **Akses Karyawan**
+  - Dashboard Karyawan
+  - Akses Karyawan
+  - Akses Absensi
+  - Radius Absensi
+  - Daftar Hak Akses
+  - Jadwal Kerja Karyawan
+- **Pengaturan Product Dan Inventory**
+  - Pengaturan Notifikasi Stok
+  - Pengaturan Limitasi Stok Keluar
+  - Pengaturan Permintaan Stok
+  - Pengaturan Harga Beli
+  - Pengaturan Penjualan Ekstra
+  - Pengaturan Resep Produk
+- **Pengaturan Reservasi**
+  - Pengaturan Jadwal Penyedia Jasa
+  - Pengaturan Uang Muka
+  - Pengaturan Tampilan Jadwal Reservasi
+  - Pengaturan Warna Jadwal Reservasi
+- **Pengeluaran**
+  - Daftar Pengeluaran
+  - Daftar Biaya
+  - Daftar Pembayaran Faktur
+  - Daftar Tagihan Rutin
+  - Daftar Mitra
+  - Rekonsiliasi Refund Penjualan
+- **Gaji**
+  - Laporan Pembayaran
+  - Struktur Gaji
+  - Pembayaran Payroll
+  - Rekonsiliasi Pembayaran
+  - Daftar Pemetaan Akun Gaji
+- **Invoice**
+  - Daftar Invoice
+  - Daftar Penerimaan Penjualan
+  - Daftar Pesanan Penjualan
+  - Daftar Penawaran Penjualan
+  - Daftar Pengiriman Penjualan
+- **Langganan**
+  - Langganan & Support
+  - Tiket Support
+  - Klaim Voucher
+  - Masukan Perbaikan
+  - Tiket Kendala
+- **Panduan Penggunaan**
+  - Panduan Online
+    - Search
+    - FAQ
+  - Panduan Video
+    - Panduan Video Baru
+- **Pelanggan**
+  - Daftar Pelanggan
+  - Grup Pelanggan
+  - Grup Harga Spesial
+  - Kustom Data Pelanggan
+  - Pengaturan Data Pelanggan
+- **Supplies**
+  - Daftar Belanja
+  - Belanja
+    - Kategori
+    - Keranjang
+      - Pembayaran
+- **Integrasi Shopee**
+  - Ajukan Integrasi
+  - Pengaturan Awal
+  - Pengaturan
+  - Pengaturan Produk
+- **Manajemen Aset**
+  - Daftar Aset Tetap
+  - Penyusutan Aset Tetap
+  - Pelepasan Aset Tetap
+  - Laporan Aset Tetap
+- **Order Online**
+  - Pengaturan Penjualan
+    - Collection
+  - Kustomisasi Toko
+  - Pengaturan Lainnya
+- **Pengaturan**
+  - Pengaturan Produk
+  - Pengaturan Transaksi
+  - Pengaturan Pengiriman
+  - Pengaturan Pembayaran
+- **Pengaturan Master**
+  - Position Level
+  - Organization
+  - Tipe Karyawan
+  - Quick Pin
+- **Akun Profil**
+  - Informasi Akun
+  - Informasi Bisnis
+  - Rekening Bank
+- **Integrasi Satu Sehat**
+  - Pengaturan Satu Sehat
+  - Riwayat Pengiriman
+  - Daftar Tindakan
+- **Jadwal Kerja**
+  - Daftar Shift
+  - Jadwal Kerja
+  - Jadwal Kerja Karyawan
+- **Kasbon**
+  - Daftar Pengajuan Kasbon
+    - Riwayat Pengajuan Kasbon
+  - Daftar Akses Kasbon
+- **majoo Preneur**
+  - majoo Event
+    - Past Event
+  - Majalah Bulanan
+- **Notifikasi**
+  - Notifikasi
+  - Transaksi Dihapus
+  - Pengaturan WhatsApp
+- **Pembayaran Digital**
+  - Pengajuan Telkomsel Poin
+  - Pengajuan Wallet
+  - Pengajuan EDC
+- **Pengaturan Pembayaran**
+  - Struk dan Biaya
+  - Struk
+  - Pembayaran Non-Tunai
+- **Alur Kerja Persetujuan**
+  - Persetujuan Pembelian
+  - Persetujuan Keuangan
+- **Buku Kas**
+  - Daftar Buku Kas & Bank
+  - Daftar Transfer
+- **Cetak**
+  - PDF
+    - PDF Reservasi
+- **Consumer App**
+  - Aktivasi Consumer App
+  - Banner Promosi
+- **majoo Teams**
+  - Akses majoo Teams
+  - Kirim Notifikasi
+- **Marketing**
+  - Daftar Kampanye Marketing
+  - Daftar Paket Kampanye Marketing
+- **Pemasukan**
+  - Daftar Penerimaan
+  - Rekonsiliasi Penerimaan Penjualan
+- **Pengaturan Ruangan**
+  - Daftar Ruangan
+  - Jenis Ruangan
+- **Terminal**
+  - Daftar Perangkat
+  - Soundbox Device
+- **Appointment**
+  - Preset Satu Sehat
+- **Daftar Akun**
+- **Inspirasi Wirausaha**
+  - Inspirasi
+- **Karyawan**
+  - Pengaturan Hak Akses
+- **Kitchen Display**
+  - Pengaturan Kitchen Display
+- **Komisi**
+  - Daftar Grup Komisi
+- **Majoo Capital**
+  - majoo Capital by GoTyme
+- **Pasien**
+  - Daftar Pasien
+- **Payroll**
+  - Pengaturan Payroll
+- **Pengaturan Karyawan**
+  - Daftar Karyawan
+- **Pengembangan Usaha**
+  - Modal Wirausaha
+- **Pesan Masuk**
+  - Daftar Pesan
+- **Tenaga Medis**
+  - Daftar Tenaga Medis
+- **AI Asisten Manajer**
+- **Daftar Impor & Ekspor**
+- **Daftar Pesanan**
+- **Dashboard Keuangan**
+- **Dashboard Penjualan**
+- **Gofood**
+- **Grabfood**
+- **Grabmart**
+- **Informasi Update**
+- **Kalender Appointment**
+- **Kasir**
+- **Kategori Kasir**
+- **Kiosk**
+- **Pengaturan Refund**
+- **Pengingat Transaksi**
+- **Saldo Awal**
+- **Satuan Barang**
+- **Tiktok Shop**
