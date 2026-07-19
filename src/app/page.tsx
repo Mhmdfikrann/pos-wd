@@ -5,9 +5,15 @@ import {
   ShoppingCart,
   ChefHat,
   Boxes,
+  ShieldCheck,
   ArrowRight,
 } from "lucide-react";
 
+/**
+ * Role launcher. Every card routes through /login?next=<role home>; the server
+ * guards (src/app/<role>/layout.tsx) enforce the actual role check, so this is
+ * just a convenience entry point — it never grants access on its own.
+ */
 const roles = [
   {
     href: "/owner",
@@ -17,6 +23,15 @@ const roles = [
     Icon: LayoutDashboard,
     bg: "#FFF1F2",
     fg: "#A91F34",
+  },
+  {
+    href: "/manager",
+    label: "Manager Outlet",
+    role: "Operasional & Approval",
+    desc: "Pantau shift, kas, dapur, dan stok; setujui refund, void, dan diskon.",
+    Icon: ShieldCheck,
+    bg: "#F3ECFB",
+    fg: "#6B3FA0",
   },
   {
     href: "/kasir",
@@ -69,13 +84,20 @@ export default function Home() {
               Point of Sale · Pilih peran untuk masuk
             </div>
           </div>
+          <Link
+            href="/login"
+            className="ml-auto text-xs font-bold rounded-lg px-3 py-2 border border-black/[0.1] transition-colors hover:bg-black/[0.03]"
+            style={{ color: "#A91F34" }}
+          >
+            Masuk
+          </Link>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {roles.map(({ href, label, role, desc, Icon, bg, fg }) => (
             <Link
               key={href}
-              href={href}
+              href={`/login?next=${encodeURIComponent(href)}`}
               className="group bg-white border border-black/[0.06] rounded-2xl p-6 transition-all hover:-translate-y-0.5 hover:shadow-[0_18px_40px_-24px_rgba(127,22,40,0.5)]"
             >
               <div className="flex items-start justify-between">

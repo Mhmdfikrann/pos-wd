@@ -28,6 +28,18 @@ const timestamps = {
     .default(sql`(CURRENT_TIMESTAMP)`),
 };
 
+// better-auth timestamps: epoch integers (mode: "timestamp") because
+// better-auth passes Date objects. Kept distinct from the text-based `timestamps`
+// used by domain tables. Defined here so the canonical `users` table can use it.
+const baTimestamps = {
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .notNull()
+    .$defaultFn(() => new Date()),
+  updatedAt: integer("updated_at", { mode: "timestamp" })
+    .notNull()
+    .$defaultFn(() => new Date()),
+};
+
 // ===== Access control =====
 export const roles = sqliteTable("roles", {
   id: text("id").primaryKey(),
@@ -57,19 +69,98 @@ export const rolePermissions = sqliteTable(
   ],
 );
 
+/**
+ * Canonical user table (BR — access control). better-auth is layered on top of
+ * this table via the drizzle adapter's schema remap (`user: schema.users` in
+ * src/lib/auth.ts), so the 8 existing FKs that point at `users.id` stay intact
+ * instead of splitting into a parallel better-auth `user` table.
+ *
+ * Columns fall into two groups:
+ *  - Domain columns (roleId, pinHash, active) — owned by our RBAC layer.
+ *  - better-auth columns (emailVerified, image, displayUsername) — required by
+ *    the adapter. Credentials live in `account` (providerId "credential"),
+ *    NOT here; `passwordHash` is kept nullable only for legacy seed migration.
+ */
 export const users = sqliteTable("users", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
+  emailVerified: integer("email_verified", { mode: "boolean" })
+    .notNull()
+    .default(false),
+  image: text("image"),
   username: text("username").unique(),
-  passwordHash: text("password_hash").notNull(),
+  displayUsername: text("display_username"),
+  /** Legacy/optional — real credential hash lives in `account.password`. */
+  passwordHash: text("password_hash"),
   pinHash: text("pin_hash"),
   roleId: text("role_id")
     .notNull()
     .references(() => roles.id),
   active: integer("active", { mode: "boolean" }).notNull().default(true),
-  ...timestamps,
+  // better-auth writes Date objects here, so these must be integer timestamps
+  // (NOT the text `timestamps` used by domain tables) or better-sqlite3 throws
+  // when binding a Date to a TEXT column during sign-up.
+  ...baTimestamps,
 });
+
+// ===== better-auth tables (session / account / verification) =====
+// Shapes follow `npx @better-auth/cli generate`. Timestamps are epoch-ms
+// integers (mode: "timestamp") because better-auth passes Date objects.
+
+export const sessions = sqliteTable(
+  "session",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    token: text("token").notNull().unique(),
+    expiresAt: integer("expires_at", { mode: "timestamp" }).notNull(),
+    ipAddress: text("ip_address"),
+    userAgent: text("user_agent"),
+    ...baTimestamps,
+  },
+  (t) => [index("session_user_idx").on(t.userId)],
+);
+
+export const accounts = sqliteTable(
+  "account",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    accountId: text("account_id").notNull(),
+    providerId: text("provider_id").notNull(),
+    /** credential hash for email/username+password (better-auth scrypt) */
+    password: text("password"),
+    accessToken: text("access_token"),
+    refreshToken: text("refresh_token"),
+    idToken: text("id_token"),
+    accessTokenExpiresAt: integer("access_token_expires_at", {
+      mode: "timestamp",
+    }),
+    refreshTokenExpiresAt: integer("refresh_token_expires_at", {
+      mode: "timestamp",
+    }),
+    scope: text("scope"),
+    ...baTimestamps,
+  },
+  (t) => [index("account_user_idx").on(t.userId)],
+);
+
+export const verifications = sqliteTable(
+  "verification",
+  {
+    id: text("id").primaryKey(),
+    identifier: text("identifier").notNull(),
+    value: text("value").notNull(),
+    expiresAt: integer("expires_at", { mode: "timestamp" }).notNull(),
+    ...baTimestamps,
+  },
+  (t) => [index("verification_identifier_idx").on(t.identifier)],
+);
 
 // ===== Outlets =====
 export const outlets = sqliteTable("outlets", {
