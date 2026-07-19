@@ -10,6 +10,7 @@ import { FormPage } from "@/components/owner/FormPage";
 import { BoardPage } from "@/components/owner/BoardPage";
 import { KasirPage } from "@/components/owner/KasirPage";
 import { CatalogManager, CATALOG_LABELS } from "@/components/owner/CatalogManager";
+import { RoleProfileMenu } from "@/components/RoleProfileMenu";
 import { pageType } from "@/components/owner/nav";
 import type { OwnerReportSnapshot } from "@/lib/reports-data";
 
@@ -51,6 +52,12 @@ export function OwnerClient({ userName, reports }: OwnerClientProps) {
 
   const isDashboard = active === "Dashboard Penjualan";
   const currentReport = reports[period] ?? reports["Hari ini"];
+  const initials = userName
+    .split(" ")
+    .map((part) => part[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
 
   return (
     <div className="wd-owner-shell" style={{ height: "100vh", display: "flex", background: "#F5F6F8", color: "#23201F", overflow: "hidden" }}>
@@ -79,7 +86,6 @@ export function OwnerClient({ userName, reports }: OwnerClientProps) {
             borderBottom: "1px solid rgba(35,32,31,0.06)",
           }}
         >
-          <div style={{ fontSize: "17px", fontWeight: 800 }}>{active}</div>
           <div style={{ flex: 1 }} />
           <span
             style={{
@@ -132,29 +138,13 @@ export function OwnerClient({ userName, reports }: OwnerClientProps) {
             </span>
           </div>
           <div style={{ width: "1px", height: "26px", background: "rgba(35,32,31,0.1)" }} />
-          <div style={{ display: "flex", alignItems: "center", gap: "9px", cursor: "pointer", padding: "3px 4px 3px 3px", borderRadius: "10px" }}>
-            <div
-              style={{
-                width: "34px",
-                height: "34px",
-                borderRadius: "50%",
-                background: "#A91F34",
-                color: "#fff",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontWeight: 800,
-                fontSize: "13.5px",
-              }}
-            >
-              A
-            </div>
-            <div style={{ lineHeight: 1.15 }}>
-              <div style={{ fontSize: "12.5px", fontWeight: 700 }}>{userName}</div>
-              <div style={{ fontSize: "10.5px", color: "rgba(35,32,31,0.5)" }}>Owner</div>
-            </div>
-            <span style={{ display: "flex", color: "rgba(35,32,31,0.35)", marginLeft: "2px" }}>{ic("chevronDown", 15, "currentColor", 2)}</span>
-          </div>
+          <RoleProfileMenu
+            name={userName}
+            roleLabel="Owner"
+            initials={initials || "O"}
+            onProfile={() => setActive("Informasi Akun")}
+            onSettings={() => setActive("Informasi Bisnis")}
+          />
         </div>
 
         {/* Scrollable content */}

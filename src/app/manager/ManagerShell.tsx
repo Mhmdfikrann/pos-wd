@@ -33,7 +33,7 @@ import {
   actionRequestVoid,
 } from "@/lib/finance-actions";
 import type { ApprovalKind, ApprovalRequestView, FinanceOrderView } from "@/lib/finance-data";
-import { LogoutButton } from "@/components/LogoutButton";
+import { RoleProfileMenu } from "@/components/RoleProfileMenu";
 
 const KIND_META: Record<ApprovalKind, { label: string; tone: keyof typeof tones }> = {
   refund: { label: "Refund", tone: "danger" },
@@ -284,8 +284,6 @@ export function ManagerShell({
             borderBottom: "1px solid rgba(35,32,31,0.06)",
           }}
         >
-          <ShieldCheck size={20} color={tokens.primary} />
-          <div style={{ fontSize: 17, fontWeight: 800 }}>Manager Outlet</div>
           <div style={{ flex: 1 }} />
           <span
             style={{
@@ -304,29 +302,13 @@ export function ManagerShell({
             {outletCount} outlet
           </span>
           <div style={{ width: 1, height: 26, background: "rgba(35,32,31,0.1)" }} />
-          <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-            <div
-              style={{
-                width: 34,
-                height: 34,
-                borderRadius: "50%",
-                background: tokens.primary,
-                color: "#fff",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontWeight: 800,
-                fontSize: 13.5,
-              }}
-            >
-              {initials}
-            </div>
-            <div style={{ lineHeight: 1.15 }}>
-              <div style={{ fontSize: 12.5, fontWeight: 700 }}>{name}</div>
-              <div style={{ fontSize: 10.5, color: "rgba(35,32,31,0.5)" }}>{roleLabel}</div>
-            </div>
-          </div>
-          <LogoutButton />
+          <RoleProfileMenu
+            name={name}
+            roleLabel={roleLabel}
+            initials={initials || "M"}
+            onProfile={() => document.getElementById("manager-overview")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+            onSettings={() => document.getElementById("manager-approvals")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+          />
         </header>
 
         <main className="wd-scroll wd-manager-content" style={{ flex: 1, overflowY: "auto", padding: "22px 26px 40px" }}>
