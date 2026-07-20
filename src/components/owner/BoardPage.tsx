@@ -4,7 +4,7 @@ import { PageHead, MONO } from "./shared";
 type BoardCol = [string, string, string, Array<[string, string, string]>];
 
 /** Port of `renderBoard(label)` — mini kitchen board with 3 columns. */
-export function BoardPage({ label }: { label: string }) {
+export function BoardPage({ label, crumbPath }: { label: string; crumbPath?: string[] }) {
   const cols: BoardCol[] = [
     ["Baru", "#3A5BB0", "#EEF2FB", [["#0431", "Meja A-12", "2:40"], ["#0430", "GoFood", "1:30"]]],
     ["Sedang Dimasak", "#C67A15", "#FCEEDB", [["#0429", "Antrean T-07", "5:12"], ["#0428", "Meja B-03", "7:20"]]],
@@ -12,7 +12,7 @@ export function BoardPage({ label }: { label: string }) {
   ];
   return (
     <div>
-      <PageHead label={label} actionLabel={null} subtitle="Pantau antrean pesanan dapur secara real-time." />
+      <PageHead label={label} crumbPath={crumbPath} actionLabel={null} subtitle="Pantau antrean pesanan dapur secara real-time." />
       <div className="wd-owner-board-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "14px" }}>
         {cols.map((c, i) => (
           <div key={i} style={{ background: "#fff", border: "1px solid rgba(35,32,31,0.06)", borderRadius: "14px", overflow: "hidden" }}>

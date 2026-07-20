@@ -4,23 +4,24 @@ import Image from "next/image";
 import type { CSSProperties } from "react";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { ic } from "./icons";
-import { NAV, containsActive, type NavItem } from "./nav";
+import { NAV, ownerPathContains, ownerPathForTrail, type NavItem } from "./nav";
 
 interface SidebarProps {
-  active: string;
+  activePath: string;
   collapsed: boolean;
   mobileOpen?: boolean;
   expanded: Record<string, boolean>;
-  onSelect: (label: string) => void;
+  onSelect: (label: string, path: string, trail: string[]) => void;
   onToggle: (label: string) => void;
   onCollapsedChange: (collapsed: boolean) => void;
   onMobileClose?: () => void;
 }
 
 /** Port of `renderNav()` — leaf + branch with depth indentation and active highlight. */
-export function Sidebar({ active, collapsed, mobileOpen = false, expanded, onSelect, onToggle, onCollapsedChange, onMobileClose }: SidebarProps) {
-  const leaf = (label: string, depth: number) => {
-    const isActive = active === label;
+export function Sidebar({ activePath, collapsed, mobileOpen = false, expanded, onSelect, onToggle, onCollapsedChange, onMobileClose }: SidebarProps) {
+  const leaf = (label: string, depth: number, trail: string[]) => {
+    const path = ownerPathForTrail(trail);
+    const isActive = activePath === path;
     const style: CSSProperties = {
       display: "flex",
       alignItems: "center",
@@ -42,7 +43,7 @@ export function Sidebar({ active, collapsed, mobileOpen = false, expanded, onSel
       <button
         key={label}
         onClick={() => {
-          onSelect(label);
+          onSelect(label, path, trail);
           onMobileClose?.();
         }}
         style={style}
@@ -70,7 +71,8 @@ export function Sidebar({ active, collapsed, mobileOpen = false, expanded, onSel
   };
 
   const railItem = (item: NavItem) => {
-    const anyActive = containsActive(item, active);
+    const path = ownerPathForTrail([item.label]);
+    const anyActive = ownerPathContains(activePath, path);
     const Icon = item.ic ? ic(item.ic, 18, anyActive ? "#A91F34" : "rgba(35,32,31,0.55)", 2) : null;
     return (
       <button
@@ -84,7 +86,7 @@ export function Sidebar({ active, collapsed, mobileOpen = false, expanded, onSel
             if (!expanded[item.label]) onToggle(item.label);
             return;
           }
-          onSelect(item.label);
+          onSelect(item.label, path, [item.label]);
         }}
         style={{
           width: "42px",
@@ -111,9 +113,10 @@ export function Sidebar({ active, collapsed, mobileOpen = false, expanded, onSel
     );
   };
 
-  const branch = (item: NavItem, depth: number) => {
+  const branch = (item: NavItem, depth: number, trail: string[]) => {
     const open = !!expanded[item.label];
-    const anyActive = containsActive(item, active);
+    const path = ownerPathForTrail(trail);
+    const anyActive = ownerPathContains(activePath, path);
     const headerStyle: CSSProperties = {
       display: "flex",
       alignItems: "center",
@@ -158,7 +161,10 @@ export function Sidebar({ active, collapsed, mobileOpen = false, expanded, onSel
         </button>
         {open ? (
           <div style={{ display: "flex", flexDirection: "column", gap: "1px", marginTop: "1px", marginBottom: "2px" }}>
-            {item.children!.map((c) => (c.children ? branch(c, depth + 1) : leaf(c.label, depth + 1)))}
+            {item.children!.map((c) => {
+              const childTrail = [...trail, c.label];
+              return c.children ? branch(c, depth + 1, childTrail) : leaf(c.label, depth + 1, childTrail);
+            })}
           </div>
         ) : null}
       </div>
@@ -184,55 +190,96 @@ export function Sidebar({ active, collapsed, mobileOpen = false, expanded, onSel
           flexShrink: 0,
           display: "flex",
           alignItems: "center",
-          justifyContent: collapsed ? "center" : "flex-start",
+          justifyContent: collapsed ? "center" : "space-between",
           gap: "10px",
-          padding: collapsed ? "0" : "0 12px 0 18px",
+          padding: collapsed ? "0" : "0 12px 0 14px",
           borderBottom: "1px solid rgba(35,32,31,0.06)",
         }}
       >
-        <button
-          type="button"
-          aria-label={collapsed ? "Buka sidebar" : "Tutup sidebar"}
-          aria-expanded={!collapsed}
-          onClick={() => onCollapsedChange(!collapsed)}
-          style={{
-            width: "38px",
-            height: "38px",
-            borderRadius: "10px",
-            background: "#fff",
-            border: "1px solid rgba(35,32,31,0.08)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            overflow: "hidden",
-            cursor: "pointer",
-            color: "#A91F34",
-          }}
-          title={collapsed ? "Buka sidebar" : "Tutup sidebar"}
-        >
-          {collapsed ? (
+        {collapsed ? (
+          <button
+            type="button"
+            aria-label="Buka sidebar"
+            aria-expanded={false}
+            onClick={() => onCollapsedChange(false)}
+            style={{
+              width: "38px",
+              height: "38px",
+              borderRadius: "10px",
+              background: "#fff",
+              border: "1px solid rgba(35,32,31,0.08)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              overflow: "hidden",
+              cursor: "pointer",
+              color: "#A91F34",
+            }}
+            title="Buka sidebar"
+          >
             <span className="wd-collapsed-logo-toggle" style={{ display: "grid", placeItems: "center", width: "100%", height: "100%" }}>
-              <Image className="wd-collapsed-logo-img" src="/logo-icon.jpg" alt="" width={34} height={34} style={{ objectFit: "contain" }} />
+              <Image className="wd-collapsed-logo-img" src="/logo-icon.jpg" alt="Wanna Dimsum" width={34} height={34} style={{ objectFit: "cover" }} />
               <span className="wd-collapsed-logo-icon" aria-hidden="true" style={{ display: "none", lineHeight: 0 }}>
                 <PanelLeftOpen size={18} strokeWidth={2.2} />
               </span>
             </span>
-          ) : (
-            <PanelLeftClose size={18} strokeWidth={2.2} />
-          )}
-        </button>
-        {collapsed ? null : (
-          <div style={{ lineHeight: 1.05, minWidth: 0 }}>
-            <div style={{ fontSize: "13.5px", fontWeight: 800, whiteSpace: "nowrap" }}>
-              <span style={{ color: "#A91F34" }}>WANNA</span> DIMSUM
+          </button>
+        ) : (
+          <>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
+              <div
+                style={{
+                  width: "34px",
+                  height: "34px",
+                  borderRadius: "9px",
+                  border: "1px solid rgba(35,32,31,0.08)",
+                  background: "#fff",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  overflow: "hidden",
+                  flexShrink: 0,
+                }}
+              >
+                <Image src="/logo-icon.jpg" alt="Wanna Dimsum" width={34} height={34} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              </div>
+              <div style={{ lineHeight: 1.05, minWidth: 0 }}>
+                <div style={{ fontSize: "13.5px", fontWeight: 800, whiteSpace: "nowrap" }}>
+                  <span style={{ color: "#A91F34" }}>WANNA</span> DIMSUM
+                </div>
+                <div style={{ fontSize: "10px", color: "rgba(35,32,31,0.45)", fontWeight: 600, marginTop: "2px" }}>Business Suite</div>
+              </div>
             </div>
-            <div style={{ fontSize: "10px", color: "rgba(35,32,31,0.45)", fontWeight: 600, marginTop: "2px" }}>Business Suite</div>
-          </div>
+            <button
+              type="button"
+              aria-label="Tutup sidebar"
+              aria-expanded={true}
+              onClick={() => onCollapsedChange(true)}
+              style={{
+                width: "34px",
+                height: "34px",
+                borderRadius: "9px",
+                background: "#fff",
+                border: "1px solid rgba(35,32,31,0.08)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                color: "#A91F34",
+                flexShrink: 0,
+              }}
+              title="Tutup sidebar"
+            >
+              <PanelLeftClose size={17} strokeWidth={2.2} />
+            </button>
+          </>
         )}
       </div>
       <div className="wd-scroll" style={{ flex: 1, overflowY: "auto", padding: collapsed ? "10px 10px 20px" : "10px 10px 20px" }}>
         <div style={{ display: "flex", flexDirection: "column", alignItems: collapsed ? "center" : "stretch", gap: collapsed ? "4px" : "2px" }}>
-          {collapsed ? NAV.map(railItem) : NAV.map((item) => (item.children ? branch(item, 0) : leaf(item.label, 0)))}
+          {collapsed
+            ? NAV.map(railItem)
+            : NAV.map((item) => (item.children ? branch(item, 0, [item.label]) : leaf(item.label, 0, [item.label])))}
         </div>
       </div>
     </div>

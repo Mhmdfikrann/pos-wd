@@ -1,5 +1,6 @@
 import { ic } from "./icons";
 import { MONO } from "./shared";
+import { DateRangeFilter, type DateRangeValue } from "@/components/DateRangeFilter";
 import { formatRupiah } from "@/lib/format";
 import type { OwnerReportSnapshot } from "@/lib/reports-data";
 
@@ -32,15 +33,14 @@ function StockBadge({ tone, stock }: { tone: "ok" | "low" | "out"; stock: number
 }
 
 interface DashboardProps {
-  period: string;
-  periods: string[];
   report: OwnerReportSnapshot;
   userName: string;
-  onPeriod: (p: string) => void;
+  dateRange: DateRangeValue;
+  onDateRange: (range: DateRangeValue) => void;
 }
 
 /** Port of the Dashboard Penjualan page + `renderVals` dashboard bits. */
-export function Dashboard({ period, periods, report, userName, onPeriod }: DashboardProps) {
+export function Dashboard({ report, userName, dateRange, onDateRange }: DashboardProps) {
   const chart = report.dailySales;
   const maxV = Math.max(1, ...chart.map((c) => c.total));
   const chartTotal = chart.reduce((total, row) => total + row.total, 0);
@@ -53,28 +53,8 @@ export function Dashboard({ period, periods, report, userName, onPeriod }: Dashb
           <div style={{ fontSize: "22px", fontWeight: 800, letterSpacing: "-0.02em" }}>Halo, {firstName(userName)}</div>
           <div style={{ fontSize: "13.5px", color: "rgba(35,32,31,0.55)", marginTop: "3px" }}>Ringkasan bisnis · {rangeLabel(report.range.from, report.range.to)}</div>
         </div>
-        <div style={{ display: "flex", gap: "8px" }}>
-          {periods.map((p) => (
-            <button
-              key={p}
-              onClick={() => onPeriod(p)}
-              style={{
-                height: "38px",
-                padding: "0 16px",
-                borderRadius: "10px",
-                fontFamily: "inherit",
-                fontSize: "12.5px",
-                fontWeight: 700,
-                cursor: "pointer",
-                transition: "all .12s",
-                border: period === p ? "none" : "1px solid rgba(35,32,31,0.12)",
-                background: period === p ? "#23201F" : "#fff",
-                color: period === p ? "#fff" : "rgba(35,32,31,0.6)",
-              }}
-            >
-              {p}
-            </button>
-          ))}
+        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", justifyContent: "flex-end" }}>
+          <DateRangeFilter value={dateRange} onChange={onDateRange} label={null} />
         </div>
       </div>
 

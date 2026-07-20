@@ -2,44 +2,17 @@ import { ic } from "./icons";
 import { MiniStat, PageHead, MONO } from "./shared";
 import { TableCard } from "./TablePage";
 import { tableData, type TableData } from "./tableData";
+import { DateRangeFilter, type DateRangeValue } from "@/components/DateRangeFilter";
 import { formatRupiah } from "@/lib/format";
 import type { OwnerReportSnapshot } from "@/lib/reports-data";
 
-/** Port of `reportFilter()`. */
-function ReportFilter() {
-  const pills = ["Hari Ini", "7 Hari", "Bulan Ini", "Custom"];
+/** Shared top-right actions for all Owner report pages. */
+function ReportActions({ dateRange, onDateRange }: { dateRange: DateRangeValue; onDateRange: (range: DateRangeValue) => void }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px", flexWrap: "wrap" }}>
-      <div
-        style={{
-          display: "flex",
-          gap: "4px",
-          background: "#fff",
-          padding: "4px",
-          borderRadius: "10px",
-          border: "1px solid rgba(35,32,31,0.1)",
-        }}
-      >
-        {pills.map((p, i) => (
-          <button
-            key={i}
-            style={{
-              border: "none",
-              cursor: "pointer",
-              borderRadius: "7px",
-              fontFamily: "inherit",
-              fontSize: "12.5px",
-              fontWeight: 700,
-              padding: "8px 14px",
-              background: i === 2 ? "#23201F" : "transparent",
-              color: i === 2 ? "#fff" : "rgba(35,32,31,0.6)",
-            }}
-          >
-            {p}
-          </button>
-        ))}
-      </div>
+    <>
+      <DateRangeFilter value={dateRange} onChange={onDateRange} label={null} />
       <button
+        type="button"
         style={{
           height: "40px",
           padding: "0 14px",
@@ -55,8 +28,8 @@ function ReportFilter() {
       >
         Semua Outlet
       </button>
-      <div style={{ flex: 1 }} />
       <button
+        type="button"
         style={{
           height: "40px",
           padding: "0 14px",
@@ -76,7 +49,7 @@ function ReportFilter() {
         {ic("download", 14, "#fff", 2)}
         Unduh Laporan
       </button>
-    </div>
+    </>
   );
 }
 
@@ -137,7 +110,19 @@ function ReportChartCard({ report }: { report: OwnerReportSnapshot }) {
 }
 
 /** Port of `renderReport(label)`. */
-export function ReportPage({ label, report }: { label: string; report?: OwnerReportSnapshot }) {
+export function ReportPage({
+  label,
+  report,
+  dateRange,
+  onDateRange,
+  crumbPath,
+}: {
+  label: string;
+  report?: OwnerReportSnapshot;
+  dateRange: DateRangeValue;
+  onDateRange: (range: DateRangeValue) => void;
+  crumbPath?: string[];
+}) {
   const d: TableData = report ? reportTableData(label, report) ?? tableData(label) : tableData(label);
   const kpis =
     d.kpis && d.kpis.length
@@ -152,8 +137,13 @@ export function ReportPage({ label, report }: { label: string; report?: OwnerRep
   );
   return (
     <div className="wd-owner-report-page">
-      <PageHead label={label} actionLabel={null} subtitle={`Ringkasan ${label.toLowerCase()} untuk periode terpilih.`} />
-      <ReportFilter />
+      <PageHead
+        label={label}
+        actionLabel={null}
+        subtitle={`Ringkasan ${label.toLowerCase()} untuk periode terpilih.`}
+        rightContent={<ReportActions dateRange={dateRange} onDateRange={onDateRange} />}
+        crumbPath={crumbPath}
+      />
       <div className="wd-owner-kpi-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "14px", marginBottom: "16px" }}>
         {kpis.slice(0, 3).map((k, i) => (
           <MiniStat

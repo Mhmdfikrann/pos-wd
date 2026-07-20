@@ -40,8 +40,8 @@ export function Badge({ text, tone }: { text: string; tone?: string }) {
 }
 
 /** Port of `crumb(label)`. */
-export function Crumb({ label }: { label: string }) {
-  const path = findPath(label);
+export function Crumb({ label, path: pathOverride }: { label: string; path?: string[] }) {
+  const path = pathOverride ?? findPath(label);
   return (
     <div
       style={{
@@ -69,10 +69,16 @@ export function PageHead({
   label,
   actionLabel,
   subtitle,
+  onAction,
+  rightContent,
+  crumbPath,
 }: {
   label: string;
   actionLabel?: string | null;
   subtitle?: string | null;
+  onAction?: () => void;
+  rightContent?: ReactNode;
+  crumbPath?: string[];
 }) {
   return (
     <div
@@ -86,14 +92,20 @@ export function PageHead({
       }}
     >
       <div>
-        <Crumb label={label} />
+        <Crumb label={label} path={crumbPath} />
         <div style={{ fontSize: "22px", fontWeight: 800, letterSpacing: "-0.02em" }}>{label}</div>
         {subtitle ? (
           <div style={{ fontSize: "13.5px", color: "rgba(35,32,31,0.55)", marginTop: "3px" }}>{subtitle}</div>
         ) : null}
       </div>
-      {actionLabel ? (
+      {rightContent ? (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "10px", flexWrap: "wrap" }}>
+          {rightContent}
+        </div>
+      ) : actionLabel ? (
         <button
+          type="button"
+          onClick={onAction}
           style={{
             height: "42px",
             padding: "0 18px",

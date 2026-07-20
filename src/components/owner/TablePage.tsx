@@ -1,3 +1,6 @@
+"use client";
+
+import { useMemo, useState } from "react";
 import { ic } from "./icons";
 import { Badge, MiniStat, PageHead, MONO } from "./shared";
 import { tableData, type Column, type TableData, type CellValue } from "./tableData";
@@ -11,7 +14,17 @@ function actionFor(label: string): string | null {
 }
 
 /** Port of `toolbar(placeholder, filters)`. */
-export function Toolbar({ placeholder, filters }: { placeholder?: string; filters?: string[] }) {
+export function Toolbar({
+  placeholder,
+  filters,
+  query,
+  onQuery,
+}: {
+  placeholder?: string;
+  filters?: string[];
+  query: string;
+  onQuery: (query: string) => void;
+}) {
   const btnStyle = {
     height: "40px",
     padding: "0 14px",
@@ -34,6 +47,8 @@ export function Toolbar({ placeholder, filters }: { placeholder?: string; filter
           {ic("search", 16, "currentColor", 2)}
         </span>
         <input
+          value={query}
+          onChange={(e) => onQuery(e.target.value)}
           placeholder={placeholder || "Cari…"}
           style={{
             width: "100%",
@@ -196,20 +211,64 @@ export function TableCard({ d }: { d: TableData }) {
 }
 
 /** Port of `renderTable(label)`. */
-export function TablePage({ label }: { label: string }) {
+export function TablePage({ label, crumbPath }: { label: string; crumbPath?: string[] }) {
   const d = tableData(label);
+  const [query, setQuery] = useState("");
+  const [addOpen, setAddOpen] = useState(false);
+  const [created, setCreated] = useState(false);
+  const filtered = useMemo(() => filterTableData(d, query), [d, query]);
+  const actionLabel = actionFor(label);
+
   return (
     <div>
-      <PageHead label={label} actionLabel={actionFor(label)} subtitle={d.subtitle} />
+      <PageHead label={label} crumbPath={crumbPath} actionLabel={actionLabel} subtitle={d.subtitle} onAction={actionLabel ? () => setAddOpen(true) : undefined} />
+      {created ? (
+        <div role="status" style={{ marginBottom: 14, padding: "10px 13px", borderRadius: 10, background: "#E4F4EC", color: "#238152", fontSize: 12.5, fontWeight: 800 }}>
+          Data demo berhasil ditambahkan untuk sesi ini.
+        </div>
+      ) : null}
       {d.kpis && d.kpis.length ? (
-      <div className="wd-owner-kpi-grid" style={{ display: "grid", gridTemplateColumns: `repeat(${d.kpis.length},1fr)`, gap: "14px", marginBottom: "16px" }}>
+        <div className="wd-owner-kpi-grid" style={{ display: "grid", gridTemplateColumns: `repeat(${d.kpis.length},1fr)`, gap: "14px", marginBottom: "16px" }}>
           {d.kpis.map((k, i) => (
             <MiniStat key={i} label={k[0]} value={k[1]} sub={k[3] || (k[2] ? (k[2] === "up" ? "▲ tren naik" : "▼ tren turun") : null)} tone={k[2]} />
           ))}
         </div>
       ) : null}
-      <Toolbar placeholder={`Cari ${label.toLowerCase()}…`} filters={d.filters} />
-      <TableCard d={d} />
+      <Toolbar placeholder={`Cari ${label.toLowerCase()}…`} filters={d.filters} query={query} onQuery={setQuery} />
+      <TableCard d={filtered} />
+      {addOpen ? (
+        <div
+          className="wd-fade"
+          onClick={() => setAddOpen(false)}
+          style={{ position: "fixed", inset: 0, zIndex: 120, background: "rgba(35,32,31,0.45)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
+        >
+          <div onClick={(e) => e.stopPropagation()} className="wd-slideup" style={{ width: "min(420px, calc(100vw - 32px))", borderRadius: 16, background: "#fff", padding: 20, boxShadow: "0 32px 70px -34px rgba(35,32,31,0.55)" }}>
+            <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 4 }}>{actionLabel} {label}</div>
+            <div style={{ fontSize: 12.5, color: "rgba(35,32,31,0.55)", marginBottom: 16 }}>Form cepat demo untuk memastikan tombol aksi Owner tidak inert.</div>
+            <input autoFocus placeholder={`Nama ${label.toLowerCase()}`} style={{ width: "100%", height: 42, border: "1px solid rgba(35,32,31,0.14)", borderRadius: 10, padding: "0 12px", fontFamily: "inherit", outline: "none", marginBottom: 10 }} />
+            <input placeholder="Catatan" style={{ width: "100%", height: 42, border: "1px solid rgba(35,32,31,0.14)", borderRadius: 10, padding: "0 12px", fontFamily: "inherit", outline: "none" }} />
+            <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
+              <button type="button" onClick={() => setAddOpen(false)} style={{ flex: 1, height: 42, borderRadius: 10, border: "1px solid rgba(35,32,31,0.14)", background: "#fff", fontFamily: "inherit", fontWeight: 700, cursor: "pointer" }}>Batal</button>
+              <button type="button" onClick={() => { setCreated(true); setAddOpen(false); }} style={{ flex: 1, height: 42, borderRadius: 10, border: "none", background: "#A91F34", color: "#fff", fontFamily: "inherit", fontWeight: 800, cursor: "pointer" }}>Simpan</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
+}
+
+function filterTableData(d: TableData, query: string): TableData {
+  const q = query.trim().toLowerCase();
+  if (!q) return d;
+  const rows = d.rows.filter((row) =>
+    Object.values(row).some((value) => cellText(value).toLowerCase().includes(q)),
+  );
+  return { ...d, rows, total: rows.length };
+}
+
+function cellText(value: CellValue | undefined): string {
+  if (value == null) return "";
+  if (Array.isArray(value)) return value.join(" ");
+  return String(value);
 }

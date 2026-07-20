@@ -147,10 +147,82 @@ export function pageType(label: string): PageType {
   if (label === "Kasir") return "kasir";
   if (label === "Kitchen Display") return "board";
   const l = label.toLowerCase();
-  const p = findPath(label).join(" / ").toLowerCase();
+  return pageTypeForTrail(label, findPath(label));
+}
+
+function slugifyLabel(label: string): string {
+  return label
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/&/g, "dan")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function walkOwnerRoutes(
+  items: NavItem[],
+  trail: string[],
+  out: Array<{ label: string; path: string; trail: string[] }>,
+): void {
+  for (const item of items) {
+    const nextTrail = [...trail, item.label];
+    const path = `/owner/${nextTrail.map(slugifyLabel).join("/")}`;
+    out.push({ label: item.label, path, trail: nextTrail });
+    if (item.children) walkOwnerRoutes(item.children, nextTrail, out);
+  }
+}
+
+const OWNER_ROUTES = (() => {
+  const routes: Array<{ label: string; path: string; trail: string[] }> = [];
+  walkOwnerRoutes(NAV, [], routes);
+  return routes;
+})();
+
+export const DEFAULT_OWNER_LABEL = "Dashboard Penjualan";
+export const DEFAULT_OWNER_PATH = "/owner/dashboard/dashboard-penjualan";
+
+export function ownerPathForLabel(label: string): string {
+  return OWNER_ROUTES.find((route) => route.label === label)?.path ?? DEFAULT_OWNER_PATH;
+}
+
+export function ownerPathForTrail(trail: string[]): string {
+  return `/owner/${trail.map(slugifyLabel).join("/")}`;
+}
+
+export function ownerPathContains(activePath: string, candidatePath: string): boolean {
+  const active = activePath.replace(/\/+$/, "");
+  const candidate = candidatePath.replace(/\/+$/, "");
+  return active === candidate || active.startsWith(`${candidate}/`);
+}
+
+export function ownerLabelForPath(pathname: string): string | null {
+  const clean = pathname.replace(/\/+$/, "") || "/owner";
+  if (clean === "/owner") return DEFAULT_OWNER_LABEL;
+  return OWNER_ROUTES.find((route) => route.path === clean)?.label ?? null;
+}
+
+export function ownerTrailForPath(pathname: string): string[] {
+  const clean = pathname.replace(/\/+$/, "") || "/owner";
+  if (clean === "/owner") return findPath(DEFAULT_OWNER_LABEL);
+  return OWNER_ROUTES.find((route) => route.path === clean)?.trail ?? findPath(DEFAULT_OWNER_LABEL);
+}
+
+export function pageTypeForTrail(label: string, trail: string[]): PageType {
+  if (label === "Kasir") return "kasir";
+  if (label === "Kitchen Display") return "board";
+  const l = label.toLowerCase();
+  const p = trail.join(" / ").toLowerCase();
   if (l.indexOf("dashboard") === 0) return "report";
   if (/^(pengaturan|informasi|kustom|notifikasi|radius|struktur gaji|kustomisasi|rekening|akses support|akun profil)/.test(l)) return "form";
   if (l === "grup outlet" || l === "grup pelanggan" || l === "grup harga spesial") return "table";
   if (p.indexOf("laporan") > -1 || p.indexOf("analisa") > -1 || /^(laporan|analisa|ringkasan|rekonsiliasi|laba rugi|neraca|arus kas|buku besar|jurnal|hutang|piutang|detail saldo)/.test(l)) return "report";
   return "table";
+}
+
+export function ownerExpandedForLabel(label: string): Record<string, boolean> {
+  const path = findPath(label);
+  const expanded: Record<string, boolean> = {};
+  for (const item of path.slice(0, -1)) expanded[item] = true;
+  return expanded;
 }

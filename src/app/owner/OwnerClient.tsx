@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Menu } from "lucide-react";
 import { ic } from "@/components/owner/icons";
 import { Sidebar } from "@/components/owner/Sidebar";
@@ -11,16 +12,28 @@ import { FormPage } from "@/components/owner/FormPage";
 import { BoardPage } from "@/components/owner/BoardPage";
 import { KasirPage } from "@/components/owner/KasirPage";
 import { CatalogManager, CATALOG_LABELS } from "@/components/owner/CatalogManager";
+import { defaultDateRange, type DateRangeValue } from "@/components/DateRangeFilter";
+import { actionGetOwnerReportForRange } from "@/lib/report-actions";
 import { RoleProfileMenu } from "@/components/RoleProfileMenu";
-import { pageType } from "@/components/owner/nav";
+import { DEFAULT_OWNER_PATH, ownerExpandedForLabel, ownerPathForLabel, ownerTrailForPath, pageTypeForTrail } from "@/components/owner/nav";
 import type { OwnerReportSnapshot } from "@/lib/reports-data";
 
-const OWNER_REPORT_PERIODS = ["Hari ini", "Minggu ini", "Bulan ini"] as const;
-type OwnerReportPeriod = (typeof OWNER_REPORT_PERIODS)[number];
-type OwnerReportSnapshots = Record<OwnerReportPeriod, OwnerReportSnapshot>;
+type OwnerReportSnapshots = Record<"Hari ini" | "Minggu ini" | "Bulan ini", OwnerReportSnapshot>;
 
 /** Port of `renderPageEl()` — archetype router for the active label. */
-function PageEl({ active, report }: { active: string; report: OwnerReportSnapshot }) {
+function PageEl({
+  active,
+  report,
+  dateRange,
+  onDateRange,
+  activeTrail,
+}: {
+  active: string;
+  report: OwnerReportSnapshot;
+  dateRange: DateRangeValue;
+  onDateRange: (range: DateRangeValue) => void;
+  activeTrail: string[];
+}) {
   if (active === "Dashboard Penjualan") return null;
   let el: React.ReactNode;
   if (CATALOG_LABELS.includes(active)) {
@@ -28,12 +41,12 @@ function PageEl({ active, report }: { active: string; report: OwnerReportSnapsho
     // key={active} remounts it per label so it opens on the right tab.
     el = <CatalogManager key={active} label={active} />;
   } else {
-    const t = pageType(active);
-    if (t === "report") el = <ReportPage label={active} report={report} />;
-    else if (t === "form") el = <FormPage label={active} />;
-    else if (t === "board") el = <BoardPage label={active} />;
+    const t = pageTypeForTrail(active, activeTrail);
+    if (t === "report") el = <ReportPage label={active} report={report} dateRange={dateRange} onDateRange={onDateRange} crumbPath={activeTrail} />;
+    else if (t === "form") el = <FormPage label={active} crumbPath={activeTrail} />;
+    else if (t === "board") el = <BoardPage label={active} crumbPath={activeTrail} />;
     else if (t === "kasir") el = <KasirPage />;
-    else el = <TablePage label={active} />;
+    else el = <TablePage label={active} crumbPath={activeTrail} />;
   }
   return <div className="wd-owner-page-pad" style={{ padding: "22px 26px 32px" }}>{el}</div>;
 }
@@ -41,19 +54,34 @@ function PageEl({ active, report }: { active: string; report: OwnerReportSnapsho
 interface OwnerClientProps {
   userName: string;
   reports: OwnerReportSnapshots;
+  initialActive?: string;
+  initialPath?: string;
+  initialTrail?: string[];
 }
 
-export function OwnerClient({ userName, reports }: OwnerClientProps) {
-  const [active, setActive] = useState("Dashboard Penjualan");
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({ Dashboard: true });
-  const [period, setPeriod] = useState<OwnerReportPeriod>("Hari ini");
+export function OwnerClient({ userName, reports, initialActive = "Dashboard Penjualan", initialPath = DEFAULT_OWNER_PATH, initialTrail }: OwnerClientProps) {
+  const router = useRouter();
+  const [active, setActive] = useState(initialActive);
+  const [activePath, setActivePath] = useState(initialPath);
+  const [activeTrail, setActiveTrail] = useState<string[]>(() => initialTrail ?? ownerTrailForPath(initialPath));
+  const [expanded, setExpanded] = useState<Record<string, boolean>>(() => ownerExpandedForLabel(initialActive));
+  const [dateRange, setDateRange] = useState<DateRangeValue>(() => defaultDateRange());
+  const [selectedReport, setSelectedReport] = useState<OwnerReportSnapshot>(() => reports["Hari ini"]);
+  const [reportLoading, setReportLoading] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   const toggle = (label: string) => setExpanded((s) => ({ ...s, [label]: !s[label] }));
+  const selectOwnerPage = (label: string, path = ownerPathForLabel(label), trail = ownerTrailForPath(path)) => {
+    setActive(label);
+    setActivePath(path);
+    setActiveTrail(trail);
+    setExpanded((current) => ({ ...current, ...ownerExpandedForLabel(label) }));
+    router.push(path);
+  };
 
   const isDashboard = active === "Dashboard Penjualan";
-  const currentReport = reports[period] ?? reports["Hari ini"];
+  const currentReport = selectedReport;
   const initials = userName
     .split(" ")
     .map((part) => part[0])
@@ -61,14 +89,28 @@ export function OwnerClient({ userName, reports }: OwnerClientProps) {
     .join("")
     .toUpperCase();
 
+  const handleDateRange = async (range: DateRangeValue) => {
+    setDateRange(range);
+    setReportLoading(true);
+    try {
+      const nextReport = await actionGetOwnerReportForRange({
+        start: { year: range.start.year, month: range.start.month, day: range.start.day },
+        end: { year: range.end.year, month: range.end.month, day: range.end.day },
+      });
+      setSelectedReport(nextReport);
+    } finally {
+      setReportLoading(false);
+    }
+  };
+
   return (
     <div className="wd-owner-shell" style={{ height: "100vh", display: "flex", background: "#F5F6F8", color: "#23201F", overflow: "hidden" }}>
       <Sidebar
-        active={active}
+        activePath={activePath}
         collapsed={mobileSidebarOpen ? false : sidebarCollapsed}
         mobileOpen={mobileSidebarOpen}
         expanded={expanded}
-        onSelect={setActive}
+        onSelect={selectOwnerPage}
         onToggle={toggle}
         onCollapsedChange={setSidebarCollapsed}
         onMobileClose={() => setMobileSidebarOpen(false)}
@@ -161,8 +203,8 @@ export function OwnerClient({ userName, reports }: OwnerClientProps) {
             name={userName}
             roleLabel="Owner"
             initials={initials || "O"}
-            onProfile={() => setActive("Informasi Akun")}
-            onSettings={() => setActive("Informasi Bisnis")}
+            onProfile={() => selectOwnerPage("Informasi Akun")}
+            onSettings={() => selectOwnerPage("Informasi Bisnis")}
           />
         </div>
 
@@ -170,14 +212,31 @@ export function OwnerClient({ userName, reports }: OwnerClientProps) {
         <div className="wd-scroll wd-owner-content" style={{ flex: 1, overflowY: "auto" }}>
           {isDashboard ? (
             <Dashboard
-              period={period}
-              periods={[...OWNER_REPORT_PERIODS]}
               report={currentReport}
               userName={userName}
-              onPeriod={(next) => setPeriod(next as OwnerReportPeriod)}
+              dateRange={dateRange}
+              onDateRange={handleDateRange}
             />
           ) : null}
-          <PageEl active={active} report={currentReport} />
+          {reportLoading ? (
+            <div
+              style={{
+                position: "sticky",
+                top: 0,
+                zIndex: 20,
+                margin: "10px 26px 0",
+                padding: "9px 12px",
+                borderRadius: 10,
+                background: "#FFF4D6",
+                color: "#A9791F",
+                fontSize: 12.5,
+                fontWeight: 800,
+              }}
+            >
+              Memuat laporan sesuai tanggal...
+            </div>
+          ) : null}
+          <PageEl active={active} report={currentReport} dateRange={dateRange} onDateRange={handleDateRange} activeTrail={activeTrail} />
         </div>
       </div>
     </div>

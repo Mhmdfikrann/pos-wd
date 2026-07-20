@@ -1,10 +1,6 @@
-import { OwnerClient } from "@/app/owner/OwnerClient";
-import { getOwnerReportSnapshots } from "@/lib/reports";
-import { requireRoute } from "@/lib/session";
+import { redirect } from "next/navigation";
+import { DEFAULT_OWNER_PATH } from "@/components/owner/nav";
 
 export default async function OwnerPage() {
-  const session = await requireRoute("/owner");
-  const reports = getOwnerReportSnapshots(session.outletIds);
-
-  return <OwnerClient userName={session.name} reports={reports} />;
+  redirect(DEFAULT_OWNER_PATH);
 }

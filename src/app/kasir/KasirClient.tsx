@@ -18,7 +18,9 @@ import {
   CreditCard,
   Wallet,
   Printer,
+  ChevronDown,
 } from "lucide-react";
+import { LogoutButton } from "@/components/LogoutButton";
 import { formatRupiah } from "@/lib/format";
 import { formatShiftDuration } from "@/lib/shift-rules";
 import { actionCheckout } from "@/lib/order-actions";
@@ -144,6 +146,7 @@ export default function KasirClient({
   const [cashMoveAmount, setCashMoveAmount] = useState(0);
   const [cashMoveNote, setCashMoveNote] = useState("");
   const [cashMoveBusy, setCashMoveBusy] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
 
   // Live shift-duration badge: recompute every 30s from the open timestamp.
   const shiftOpenedMs = new Date(shiftOpenedAt).getTime();
@@ -466,27 +469,130 @@ export default function KasirClient({
           Online
         </span>
         <div className="wd-mobile-hide" style={{ width: 1, height: 28, background: "rgba(45,32,34,0.1)" }} />
-        <div className="wd-topbar-user" style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div
+        <div
+          className="wd-topbar-user"
+          style={{ position: "relative", display: "flex", alignItems: "center", gap: 10 }}
+        >
+          <button
+            type="button"
+            onClick={() => setProfileOpen((open) => !open)}
+            aria-haspopup="menu"
+            aria-expanded={profileOpen}
             style={{
-              width: 38,
-              height: 38,
-              borderRadius: "50%",
-              background: "#FFD84D",
-              color: "#2D2022",
+              border: "none",
+              background: "transparent",
+              padding: 0,
               display: "flex",
               alignItems: "center",
-              justifyContent: "center",
-              fontWeight: 800,
-              fontSize: 14,
+              gap: 10,
+              cursor: "pointer",
+              fontFamily: "inherit",
+              color: "#2D2022",
             }}
           >
-            {cashierInitial}
-          </div>
-          <div style={{ lineHeight: 1.15 }}>
-            <div style={{ fontSize: 12.5, fontWeight: 700 }}>{cashierName}</div>
-            <div style={{ fontSize: 10.5, color: "rgba(45,32,34,0.5)" }}>Kasir · Terminal 01</div>
-          </div>
+            <div
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: "50%",
+                background: "#FFD84D",
+                color: "#2D2022",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontWeight: 800,
+                fontSize: 14,
+                flexShrink: 0,
+              }}
+            >
+              {cashierInitial}
+            </div>
+            <div style={{ lineHeight: 1.15, textAlign: "left" }}>
+              <div style={{ fontSize: 12.5, fontWeight: 700 }}>{cashierName}</div>
+              <div style={{ fontSize: 10.5, color: "rgba(45,32,34,0.5)" }}>Kasir · Terminal 01</div>
+            </div>
+            <ChevronDown
+              size={15}
+              strokeWidth={2.3}
+              style={{
+                color: "rgba(45,32,34,0.45)",
+                transform: profileOpen ? "rotate(180deg)" : "rotate(0deg)",
+                transition: "transform .15s ease",
+              }}
+            />
+          </button>
+
+          {profileOpen ? (
+            <div
+              role="menu"
+              className="wd-fade"
+              style={{
+                position: "absolute",
+                top: "calc(100% + 10px)",
+                right: 0,
+                width: 230,
+                zIndex: 80,
+                border: "1px solid rgba(45,32,34,0.1)",
+                borderRadius: 14,
+                background: "#fff",
+                boxShadow: "0 22px 50px -24px rgba(45,32,34,0.45)",
+                padding: 10,
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  padding: "8px 8px 10px",
+                  borderBottom: "1px solid rgba(45,32,34,0.08)",
+                  marginBottom: 8,
+                }}
+              >
+                <div
+                  style={{
+                    width: 34,
+                    height: 34,
+                    borderRadius: "50%",
+                    background: "#FFD84D",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontWeight: 800,
+                    fontSize: 13,
+                    color: "#2D2022",
+                  }}
+                >
+                  {cashierInitial}
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: "#2D2022" }}>{cashierName}</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(45,32,34,0.48)", marginTop: 2 }}>
+                    Kasir · Terminal 01
+                  </div>
+                </div>
+              </div>
+              <LogoutButton
+                variant="full"
+                style={{
+                  width: "100%",
+                  height: 40,
+                  border: "none",
+                  borderRadius: 10,
+                  background: "#FBE7E7",
+                  color: "#B83636",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                  fontFamily: "inherit",
+                  fontSize: 13,
+                  fontWeight: 800,
+                  cursor: "pointer",
+                }}
+              />
+            </div>
+          ) : null}
         </div>
       </div>
 
@@ -1362,6 +1468,7 @@ export default function KasirClient({
                       justifyContent: "space-between",
                       padding: "18px 22px",
                       borderBottom: "1px solid rgba(45,32,34,0.08)",
+                      flexShrink: 0,
                     }}
                   >
                     <div style={{ fontSize: 17, fontWeight: 800 }}>Pembayaran</div>
@@ -1663,18 +1770,23 @@ export default function KasirClient({
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
+                  padding: 16,
                   zIndex: 120,
+                  overflowY: "auto",
                 }}
               >
                 <div
                   onClick={(e) => e.stopPropagation()}
                   className="wd-slideup"
                   style={{
-                    width: 560,
+                    width: "min(560px, calc(100vw - 32px))",
+                    maxHeight: "calc(100dvh - 32px)",
                     background: "#fff",
                     borderRadius: 18,
                     overflow: "hidden",
                     boxShadow: "0 40px 80px -30px rgba(127,22,40,0.5)",
+                    display: "flex",
+                    flexDirection: "column",
                   }}
                 >
                   <div
@@ -1684,6 +1796,7 @@ export default function KasirClient({
                       justifyContent: "space-between",
                       padding: "18px 22px",
                       borderBottom: "1px solid rgba(45,32,34,0.08)",
+                      flexShrink: 0,
                     }}
                   >
                     <div>
@@ -1711,7 +1824,14 @@ export default function KasirClient({
                       <X size={18} strokeWidth={2.2} />
                     </button>
                   </div>
-                  <div style={{ padding: "20px 22px" }}>
+                  <div
+                    className="wd-scroll"
+                    style={{
+                      padding: "20px 22px 22px",
+                      overflowY: "auto",
+                      overscrollBehavior: "contain",
+                    }}
+                  >
                     <div
                       style={{
                         background: "#2D2022",
