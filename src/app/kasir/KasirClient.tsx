@@ -23,18 +23,37 @@ import {
 import { LogoutButton } from "@/components/LogoutButton";
 import { formatRupiah } from "@/lib/format";
 import { formatShiftDuration } from "@/lib/shift-rules";
-import { actionCheckout } from "@/lib/order-actions";
+import { actionCheckout, actionSaveHeldOrder } from "@/lib/order-actions";
 import { actionCloseShift, actionGetExpectedCash, actionRecordCashMovement } from "@/lib/shift-actions";
 import type { CashMovementType, ExpectedCashBreakdown } from "@/lib/cash-data";
 import type { Receipt } from "@/lib/order";
 
 // ---- Types ----
 type Stock = "ok" | "low" | "out";
-export type Product = { id: string; name: string; price: number; cat: string; stock: Stock };
-type Cart = Record<string, number>;
 type OrderType = "dinein" | "takeaway" | "delivery";
-type PayMethod = "tunai" | "qris" | "debit" | "ewallet";
-type ModalKind = null | "pay" | "done" | "close";
+type DeliveryProvider = "gofood" | "grabfood" | "shopeefood";
+export type Product = { id: string; name: string; price: number; cat: string; stock: Stock };
+export type Promo = { id: string; name: string; type: "percent" | "amount"; value: number };
+export type HeldOrder = {
+  orderId: string;
+  orderNo: string;
+  orderType: OrderType;
+  tableNo: string | null;
+  customerName: string | null;
+  deliveryProvider: DeliveryProvider | null;
+  channelOrderName: string | null;
+  subtotal: number;
+  discountAmount: number;
+  taxAmount: number;
+  total: number;
+  promoId: string | null;
+  promoName: string | null;
+  updatedAt: string;
+  lines: Array<{ productId: string | null; quantity: number; note: string | null }>;
+};
+type Cart = Record<string, number>;
+type PayMethod = "tunai" | "qris" | "card" | "transfer" | "ewallet";
+type ModalKind = null | "pay" | "done" | "close" | "promo" | "held";
 
 // Title for the "Semua" tab; per-category titles come from the category label.
 const ALL_TITLE = "Semua Menu";
@@ -49,19 +68,29 @@ const STOCK_TAG: Record<Stock, [string, string]> = {
   out: ["Habis", "#5A4B4D"],
 };
 
-const OT_MAP: Record<OrderType, [string, string]> = {
-  dinein: ["Meja", "A-12"],
-  takeaway: ["Antrean", "T-07"],
-  delivery: ["Order", "GF-231"],
-};
+const DELIVERY_PROVIDERS: [DeliveryProvider, string][] = [
+  ["gofood", "GoFood"],
+  ["grabfood", "GrabFood"],
+  ["shopeefood", "ShopeeFood"],
+];
+const DELIVERY_LABEL: Record<DeliveryProvider, string> = Object.fromEntries(DELIVERY_PROVIDERS) as Record<DeliveryProvider, string>;
 
 // Client pay-method label → server payments.method enum.
-const PAY_METHOD: Record<PayMethod, "cash" | "qris" | "transfer" | "ewallet"> = {
+const PAY_METHOD: Record<PayMethod, "cash" | "qris" | "transfer" | "ewallet" | "card"> = {
   tunai: "cash",
   qris: "qris",
-  debit: "transfer",
+  card: "card",
+  transfer: "transfer",
   ewallet: "ewallet",
 };
+const CARD_PROVIDERS = [
+  ["edc_bca", "EDC BCA"],
+  ["edc_mandiri", "EDC Mandiri"],
+  ["edc_bca_lainnya", "EDC BCA Lainnya"],
+  ["edc_mandiri_lainnya", "EDC Mandiri Lainnya"],
+] as const;
+const TRANSFER_ACCOUNTS = [["bca", "Transfer Rekening BCA"], ["mandiri", "Transfer Rekening Mandiri"]] as const;
+type ClientPaymentLine = { method: PayMethod; amount: number; cashReceived: number; provider?: string | null; channelLabel?: string | null; referenceNo?: string | null };
 
 // Dine-in domed-plate icon (mockup path has no exact lucide component).
 function DineInIcon({ size = 16, strokeWidth = 2 }: { size?: number; strokeWidth?: number }) {
@@ -93,6 +122,8 @@ export default function KasirClient({
   shiftId,
   shiftOpenedAt,
   taxPercent,
+  promos,
+  heldOrders: initialHeldOrders,
 }: {
   products: Product[];
   categories: [string, string][];
@@ -104,6 +135,8 @@ export default function KasirClient({
   shiftOpenedAt: string;
   /** outlet PPN percent — server is authoritative, this mirrors it for display. */
   taxPercent: number;
+  promos: Promo[];
+  heldOrders: HeldOrder[];
 }) {
   const router = useRouter();
   // Product lookup by id (replaces the module-level PRODUCTS.find).
@@ -126,11 +159,25 @@ export default function KasirClient({
     return valid;
   });
   const [orderType, setOrderType] = useState<OrderType>("dinein");
+  const [tableNo, setTableNo] = useState("A-12");
+  const [customerName, setCustomerName] = useState("");
+  const [deliveryProvider, setDeliveryProvider] = useState<DeliveryProvider>("gofood");
+  const [channelOrderName, setChannelOrderName] = useState("");
+  const [contextError, setContextError] = useState<string | null>(null);
+  const [promoId, setPromoId] = useState<string | null>(null);
+  const [heldOrders, setHeldOrders] = useState<HeldOrder[]>(initialHeldOrders);
+  const [activeHeldOrderId, setActiveHeldOrderId] = useState<string | null>(null);
+  const [savingHeld, setSavingHeld] = useState(false);
+  const [heldError, setHeldError] = useState<string | null>(null);
   const [modal, setModal] = useState<ModalKind>(null);
   const [payMethod, setPayMethod] = useState<PayMethod>("tunai");
   const [cash, setCash] = useState(0);
+  const [paymentProvider, setPaymentProvider] = useState("edc_bca");
+  const [paymentReference, setPaymentReference] = useState("");
+  const [splitAmount, setSplitAmount] = useState(0);
+  const [splitLines, setSplitLines] = useState<ClientPaymentLine[]>([]);
   const [lastTotal, setLastTotal] = useState(0);
-  const [lastCash, setLastCash] = useState(0);
+  const [lastChange, setLastChange] = useState(0);
   // Checkout wiring: busy guard (blocks double-submit), error, and the receipt
   // returned by the server. One idempotency key per pay-modal open (BR-003).
   const [paying, setPaying] = useState(false);
@@ -167,8 +214,12 @@ export default function KasirClient({
   // mirrors the server (order-math.ts): round once on the discounted subtotal.
   // The server total is authoritative at checkout; this is for display.
   const subtotal = Object.entries(cart).reduce((s, [id, q]) => s + (prod(id)?.price ?? 0) * q, 0);
-  const tax = Math.round((subtotal * taxPercent) / 100);
-  const total = subtotal + tax;
+  const activePromo = promos.find((p) => p.id === promoId) ?? null;
+  const discount = activePromo
+    ? Math.min(subtotal, activePromo.type === "percent" ? Math.round((subtotal * activePromo.value) / 100) : activePromo.value)
+    : 0;
+  const tax = Math.round(((subtotal - discount) * taxPercent) / 100);
+  const total = subtotal - discount + tax;
   const cartCount = Object.values(cart).reduce((a, b) => a + b, 0);
 
   // Handlers
@@ -194,9 +245,19 @@ export default function KasirClient({
   };
   const openPay = () => {
     if (cartCount === 0) return;
+    const validation = validateOrderContext();
+    if (validation) {
+      setContextError(validation);
+      return;
+    }
+    setContextError(null);
     setModal("pay");
     setPayMethod("tunai");
     setCash(0);
+    setPaymentProvider("edc_bca");
+    setPaymentReference("");
+    setSplitAmount(0);
+    setSplitLines([]);
     setPayError(null);
   };
   const closeModal = () => {
@@ -210,23 +271,43 @@ export default function KasirClient({
   // retry, double-click, StrictMode — can never double-charge (BR-003).
   const confirmPay = async () => {
     if (paying) return;
-    if (payMethod === "tunai" && cash < total) return;
+    const usingSplit = splitLines.length > 0;
+    if (!usingSplit && payMethod === "tunai" && cash < total) return;
+    if (usingSplit && splitRemaining !== 0) return;
     if (cartCount === 0) return;
     setPaying(true);
     setPayError(null);
 
     const cart_lines = Object.entries(cart).map(([productId, quantity]) => ({ productId, quantity }));
     const cashReceived = payMethod === "tunai" ? cash : total;
+    const payments = usingSplit
+      ? splitLines.map((line) => ({
+          method: PAY_METHOD[line.method],
+          amount: line.amount,
+          cashReceived: line.method === "tunai" ? line.cashReceived : undefined,
+          provider: line.provider,
+          channelLabel: line.channelLabel,
+          referenceNo: line.referenceNo,
+        }))
+      : undefined;
 
     const res = await actionCheckout({
       outletId,
+      heldOrderId: activeHeldOrderId,
       cart: cart_lines,
       orderType,
+      tableNo: orderType === "dinein" ? tableNo : null,
+      customerName: orderType === "delivery" ? null : customerName,
+      deliveryProvider: orderType === "delivery" ? deliveryProvider : null,
+      channelOrderName: orderType === "delivery" ? channelOrderName : null,
       taxPercent,
-      payment: {
+      promoId,
+      payment: payments ? undefined : {
         method: PAY_METHOD[payMethod],
         cashReceived,
+        referenceNo: paymentReference || null,
       },
+      payments,
       idempotencyKey,
     });
 
@@ -236,8 +317,12 @@ export default function KasirClient({
       return;
     }
     setReceipt(res.receipt);
+    if (activeHeldOrderId) {
+      setHeldOrders((orders) => orders.filter((order) => order.orderId !== activeHeldOrderId));
+      setActiveHeldOrderId(null);
+    }
     setLastTotal(res.receipt.total);
-    setLastCash(res.receipt.payment.cashReceived ?? res.receipt.total);
+    setLastChange(res.receipt.payments.reduce((sum, line) => sum + (line.changeAmount ?? 0), 0));
     setModal("done");
   };
 
@@ -245,10 +330,75 @@ export default function KasirClient({
     setCart({});
     setModal(null);
     setCash(0);
+    setSplitAmount(0);
+    setSplitLines([]);
+    setPaymentReference("");
     setReceipt(null);
+    setLastChange(0);
     setPayError(null);
+    setContextError(null);
+    setTableNo("");
+    setCustomerName("");
+    setDeliveryProvider("gofood");
+    setChannelOrderName("");
+    setPromoId(null);
+    setActiveHeldOrderId(null);
+    setHeldError(null);
     // Fresh key for the next transaction (BR-003).
     setIdempotencyKey(crypto.randomUUID());
+  };
+
+  const saveCurrentOrder = async () => {
+    if (savingHeld || cartCount === 0) return;
+    const validation = validateOrderContext();
+    if (validation) {
+      setContextError(validation);
+      return;
+    }
+    setSavingHeld(true);
+    setHeldError(null);
+    const cart_lines = Object.entries(cart).map(([productId, quantity]) => ({ productId, quantity }));
+    const res = await actionSaveHeldOrder({
+      orderId: activeHeldOrderId,
+      outletId,
+      cart: cart_lines,
+      orderType,
+      tableNo: orderType === "dinein" ? tableNo : null,
+      customerName: orderType === "delivery" ? null : customerName,
+      deliveryProvider: orderType === "delivery" ? deliveryProvider : null,
+      channelOrderName: orderType === "delivery" ? channelOrderName : null,
+      taxPercent,
+      promoId,
+    });
+    setSavingHeld(false);
+    if (!res.ok) {
+      setHeldError(res.error);
+      return;
+    }
+    setHeldOrders((orders) => {
+      const others = orders.filter((order) => order.orderId !== res.heldOrder.orderId);
+      return [res.heldOrder, ...others];
+    });
+    setActiveHeldOrderId(res.heldOrder.orderId);
+    setHeldError(null);
+  };
+
+  const resumeHeldOrder = (order: HeldOrder) => {
+    const nextCart: Cart = {};
+    for (const line of order.lines) {
+      if (line.productId && byId.has(line.productId)) nextCart[line.productId] = line.quantity;
+    }
+    setCart(nextCart);
+    setOrderType(order.orderType);
+    setTableNo(order.tableNo ?? "");
+    setCustomerName(order.customerName ?? "");
+    setDeliveryProvider(order.deliveryProvider ?? "gofood");
+    setChannelOrderName(order.channelOrderName ?? "");
+    setPromoId(order.promoId);
+    setActiveHeldOrderId(order.orderId);
+    setContextError(null);
+    setHeldError(null);
+    setModal(null);
   };
 
   const openCloseShift = async () => {
@@ -319,6 +469,28 @@ export default function KasirClient({
     router.refresh();
   };
 
+  const splitPaid = splitLines.reduce((sum, line) => sum + line.amount, 0);
+  const splitRemaining = total - splitPaid;
+  const addSplitLine = () => {
+    const amount = splitAmount || Math.max(0, splitRemaining);
+    if (amount <= 0 || amount > splitRemaining) return;
+    if (payMethod !== "tunai" && !paymentReference.trim()) {
+      setPayError("Reference wajib untuk pembayaran non-tunai.");
+      return;
+    }
+    if (payMethod === "tunai" && cash < amount) {
+      setPayError("Tunai kurang dari nominal cash line.");
+      return;
+    }
+    const provider = payMethod === "card" || payMethod === "transfer" ? paymentProvider : null;
+    const label = payMethod === "card" ? CARD_PROVIDERS.find(([id]) => id === provider)?.[1] : payMethod === "transfer" ? TRANSFER_ACCOUNTS.find(([id]) => id === provider)?.[1] : null;
+    setSplitLines((lines) => [...lines, { method: payMethod, amount, cashReceived: payMethod === "tunai" ? cash : amount, provider, channelLabel: label ?? null, referenceNo: payMethod === "tunai" ? null : paymentReference.trim() }]);
+    setSplitAmount(0);
+    setCash(0);
+    setPaymentReference("");
+    setPayError(null);
+  };
+
   const counts: Record<string, number> = {};
   products.forEach((p) => {
     counts[p.cat] = (counts[p.cat] || 0) + 1;
@@ -329,8 +501,46 @@ export default function KasirClient({
   const filtered = products.filter(
     (p) => (cat === "all" || p.cat === cat) && (!q || p.name.toLowerCase().includes(q)),
   );
-  const [slotLabel, slotValue] = OT_MAP[orderType];
+  const contextValidation = validateOrderContext();
+  const contextSummary = orderContextSummary();
   const cashierInitial = cashierName.charAt(0);
+
+  function handleOrderType(next: OrderType) {
+    setOrderType(next);
+    setContextError(null);
+  }
+
+  function validateOrderContext(): string | null {
+    if (orderType === "dinein" && !tableNo.trim()) return "Nomor meja wajib untuk dine-in.";
+    if (orderType === "takeaway" && !customerName.trim()) return "Nama pemesan wajib untuk take away.";
+    if (orderType === "delivery") {
+      if (!deliveryProvider) return "Provider delivery wajib dipilih.";
+      if (!channelOrderName.trim()) return "Nama transaksi marketplace wajib diisi.";
+    }
+    return null;
+  }
+
+  function orderContextSummary(): string {
+    if (orderType === "dinein") {
+      return [tableNo.trim() ? `Meja ${tableNo.trim()}` : "Nomor meja belum diisi", customerName.trim() ? `a.n. ${customerName.trim()}` : null]
+        .filter(Boolean)
+        .join(" · ");
+    }
+    if (orderType === "takeaway") return customerName.trim() ? `Takeaway · a.n. ${customerName.trim()}` : "Nama pemesan belum diisi";
+    return `${DELIVERY_LABEL[deliveryProvider]} · ${channelOrderName.trim() || "Nama transaksi belum diisi"}`;
+  }
+
+  function receiptContextSummary(r: Receipt | null): string {
+    if (!r) return contextSummary;
+    if (r.orderType === "dinein") {
+      return [r.tableNo ? `Meja ${r.tableNo}` : "Dine-in", r.customerName ? `a.n. ${r.customerName}` : null]
+        .filter(Boolean)
+        .join(" · ");
+    }
+    if (r.orderType === "takeaway") return r.customerName ? `Takeaway · a.n. ${r.customerName}` : "Takeaway";
+    const provider = r.deliveryProvider ? DELIVERY_LABEL[r.deliveryProvider] : "Delivery";
+    return [provider, r.channelOrderName].filter(Boolean).join(" · ");
+  }
 
   return (
     <div className="wd-kasir-shell" style={{ height: "100vh", display: "flex", flexDirection: "column", background: "#FFF9F2" }}>
@@ -413,6 +623,43 @@ export default function KasirClient({
 
         <div style={{ flex: 1 }} />
 
+        <span
+          className="wd-mobile-hide"
+          aria-label={`Kasir aktif: ${cashierName}`}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 8,
+            fontSize: 12.5,
+            fontWeight: 800,
+            padding: "8px 13px",
+            borderRadius: 9,
+            background: "#FFF1F2",
+            color: "#A91F34",
+            maxWidth: 220,
+          }}
+        >
+          <span
+            style={{
+              width: 18,
+              height: 18,
+              borderRadius: "50%",
+              background: "#FFD84D",
+              color: "#2D2022",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 10,
+              fontWeight: 900,
+              flexShrink: 0,
+            }}
+          >
+            {cashierInitial}
+          </span>
+          <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            Kasir aktif · {cashierName}
+          </span>
+        </span>
         <span
           className="wd-mobile-hide"
           style={{
@@ -866,18 +1113,29 @@ export default function KasirClient({
                   #TRX-0429
                 </span>
               </div>
-              <span
-                style={{
-                  fontSize: 12,
-                  fontWeight: 700,
-                  background: "#FFF4D6",
-                  color: "#A9791F",
-                  padding: "3px 10px",
-                  borderRadius: 999,
-                }}
-              >
-                {cartCount} item
-              </span>
+              <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                {heldOrders.length > 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => setModal("held")}
+                    style={{ border: "none", borderRadius: 999, background: "#FFF1F2", color: "#A91F34", padding: "4px 9px", fontFamily: "inherit", fontSize: 11.5, fontWeight: 800, cursor: "pointer" }}
+                  >
+                    Buka Order Tersimpan ({heldOrders.length})
+                  </button>
+                ) : null}
+                <span
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 700,
+                    background: "#FFF4D6",
+                    color: "#A9791F",
+                    padding: "3px 10px",
+                    borderRadius: 999,
+                  }}
+                >
+                  {cartCount} item
+                </span>
+              </div>
             </div>
             {/* Order type tabs */}
             <div
@@ -903,7 +1161,7 @@ export default function KasirClient({
                 return (
                   <button
                     key={key}
-                    onClick={() => setOrderType(key)}
+                    onClick={() => handleOrderType(key)}
                     style={{
                       flex: 1,
                       display: "flex",
@@ -929,59 +1187,90 @@ export default function KasirClient({
                 );
               })}
             </div>
-            <div style={{ display: "flex", gap: 9, marginTop: 11 }}>
-              <div
-                style={{
-                  flex: 1,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  height: 40,
-                  padding: "0 12px",
-                  border: "1.5px solid rgba(45,32,34,0.12)",
-                  borderRadius: 9,
-                  background: "#FFF9F2",
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: 11,
-                    fontWeight: 700,
-                    color: "rgba(45,32,34,0.45)",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.04em",
-                  }}
-                >
-                  {slotLabel}
+            <div
+              style={{
+                marginTop: 11,
+                border: "1.5px solid rgba(45,32,34,0.1)",
+                borderRadius: 12,
+                background: "#FFF9F2",
+                padding: 10,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 9 }}>
+                <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase", color: "rgba(45,32,34,0.42)" }}>
+                  Konteks pesanan
                 </span>
-                <span style={{ fontSize: 14, fontWeight: 800, color: "#A91F34" }}>{slotValue}</span>
-              </div>
-              <div
-                style={{
-                  flex: 1,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  height: 40,
-                  padding: "0 12px",
-                  border: "1.5px solid rgba(45,32,34,0.12)",
-                  borderRadius: 9,
-                  background: "#FFF9F2",
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: 11,
-                    fontWeight: 700,
-                    color: "rgba(45,32,34,0.45)",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.04em",
-                  }}
-                >
-                  Tamu
+                <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 12, fontWeight: 800, color: contextValidation ? "#B83636" : "#238152" }}>
+                  {contextSummary}
                 </span>
-                <span style={{ fontSize: 14, fontWeight: 800, color: "#2D2022" }}>2</span>
               </div>
+
+              {orderType === "dinein" ? (
+                <div style={{ display: "grid", gridTemplateColumns: "0.8fr 1.2fr", gap: 8 }}>
+                  <label style={{ display: "block" }}>
+                    <span style={{ display: "block", fontSize: 11, fontWeight: 700, color: "rgba(45,32,34,0.55)", marginBottom: 5 }}>Nomor meja *</span>
+                    <input
+                      value={tableNo}
+                      onChange={(e) => { setTableNo(e.target.value); setContextError(null); }}
+                      placeholder="A-12"
+                      style={{ width: "100%", height: 38, border: "1.5px solid rgba(45,32,34,0.14)", borderRadius: 9, padding: "0 10px", background: "#fff", outline: "none", fontFamily: "inherit", fontSize: 13.5, fontWeight: 700 }}
+                    />
+                  </label>
+                  <label style={{ display: "block" }}>
+                    <span style={{ display: "block", fontSize: 11, fontWeight: 700, color: "rgba(45,32,34,0.55)", marginBottom: 5 }}>Nama pemesan</span>
+                    <input
+                      value={customerName}
+                      onChange={(e) => { setCustomerName(e.target.value); setContextError(null); }}
+                      placeholder="opsional"
+                      style={{ width: "100%", height: 38, border: "1.5px solid rgba(45,32,34,0.14)", borderRadius: 9, padding: "0 10px", background: "#fff", outline: "none", fontFamily: "inherit", fontSize: 13.5, fontWeight: 700 }}
+                    />
+                  </label>
+                </div>
+              ) : null}
+
+              {orderType === "takeaway" ? (
+                <label style={{ display: "block" }}>
+                  <span style={{ display: "block", fontSize: 11, fontWeight: 700, color: "rgba(45,32,34,0.55)", marginBottom: 5 }}>Nama pemesan *</span>
+                  <input
+                    value={customerName}
+                    onChange={(e) => { setCustomerName(e.target.value); setContextError(null); }}
+                    placeholder="Nama untuk dipanggil"
+                    style={{ width: "100%", height: 38, border: "1.5px solid rgba(45,32,34,0.14)", borderRadius: 9, padding: "0 10px", background: "#fff", outline: "none", fontFamily: "inherit", fontSize: 13.5, fontWeight: 700 }}
+                  />
+                </label>
+              ) : null}
+
+              {orderType === "delivery" ? (
+                <div style={{ display: "grid", gridTemplateColumns: "0.9fr 1.1fr", gap: 8 }}>
+                  <label style={{ display: "block" }}>
+                    <span style={{ display: "block", fontSize: 11, fontWeight: 700, color: "rgba(45,32,34,0.55)", marginBottom: 5 }}>Provider *</span>
+                    <select
+                      value={deliveryProvider}
+                      onChange={(e) => { setDeliveryProvider(e.target.value as DeliveryProvider); setContextError(null); }}
+                      style={{ width: "100%", height: 38, border: "1.5px solid rgba(45,32,34,0.14)", borderRadius: 9, padding: "0 10px", background: "#fff", outline: "none", fontFamily: "inherit", fontSize: 13.5, fontWeight: 700 }}
+                    >
+                      {DELIVERY_PROVIDERS.map(([value, label]) => (
+                        <option key={value} value={value}>{label}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label style={{ display: "block" }}>
+                    <span style={{ display: "block", fontSize: 11, fontWeight: 700, color: "rgba(45,32,34,0.55)", marginBottom: 5 }}>Nama transaksi *</span>
+                    <input
+                      value={channelOrderName}
+                      onChange={(e) => { setChannelOrderName(e.target.value); setContextError(null); }}
+                      placeholder="GF-231 / nama customer"
+                      style={{ width: "100%", height: 38, border: "1.5px solid rgba(45,32,34,0.14)", borderRadius: 9, padding: "0 10px", background: "#fff", outline: "none", fontFamily: "inherit", fontSize: 13.5, fontWeight: 700 }}
+                    />
+                  </label>
+                </div>
+              ) : null}
+
+              {contextError ? (
+                <div role="alert" style={{ marginTop: 8, borderRadius: 8, background: "#FBE7E7", color: "#B83636", padding: "7px 9px", fontSize: 12, fontWeight: 700 }}>
+                  {contextError}
+                </div>
+              ) : null}
             </div>
           </div>
 
@@ -1163,6 +1452,20 @@ export default function KasirClient({
               <span>Subtotal</span>
               <span style={{ fontFamily: MONO }}>{fmt(subtotal)}</span>
             </div>
+            {activePromo ? (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  fontSize: 13,
+                  color: "#2E9D64",
+                  marginBottom: 7,
+                }}
+              >
+                <span>Promo · {activePromo.name}</span>
+                <span style={{ fontFamily: MONO, fontWeight: 700 }}>-{fmt(discount)}</span>
+              </div>
+            ) : null}
             <div
               style={{
                 display: "flex",
@@ -1189,9 +1492,19 @@ export default function KasirClient({
                 {fmt(total)}
               </span>
             </div>
+            {activeHeldOrderId ? (
+              <div style={{ marginTop: 10, fontSize: 12, fontWeight: 800, color: "#A91F34" }}>
+                Mengedit order tersimpan · {heldOrders.find((o) => o.orderId === activeHeldOrderId)?.orderNo ?? activeHeldOrderId}
+              </div>
+            ) : null}
+            {heldError ? (
+              <div role="alert" style={{ marginTop: 10, borderRadius: 8, background: "#FBE7E7", color: "#B83636", padding: "8px 10px", fontSize: 12, fontWeight: 700 }}>
+                {heldError}
+              </div>
+            ) : null}
             <div style={{ display: "flex", gap: 9, marginTop: 15 }}>
               <button
-                onClick={() => {}}
+                onClick={() => setModal("promo")}
                 style={{
                   flex: "0 0 auto",
                   height: 54,
@@ -1209,7 +1522,28 @@ export default function KasirClient({
                 onMouseEnter={(e) => (e.currentTarget.style.background = "#FFF4D6")}
                 onMouseLeave={(e) => (e.currentTarget.style.background = "#fff")}
               >
-                Tahan
+                Promosi
+              </button>
+              <button
+                onClick={() => void saveCurrentOrder()}
+                disabled={savingHeld || cartCount === 0}
+                style={{
+                  flex: "0 0 auto",
+                  height: 54,
+                  padding: "0 14px",
+                  borderRadius: 10,
+                  border: "1.5px solid rgba(45,32,34,0.15)",
+                  background: "#fff",
+                  fontFamily: "inherit",
+                  fontWeight: 700,
+                  fontSize: 14,
+                  color: "#2D2022",
+                  cursor: savingHeld || cartCount === 0 ? "not-allowed" : "pointer",
+                  opacity: savingHeld || cartCount === 0 ? 0.55 : 1,
+                  transition: "all .15s",
+                }}
+              >
+                {savingHeld ? "Menyimpan…" : "Simpan Order"}
               </button>
               <button
                 onClick={openPay}
@@ -1241,9 +1575,65 @@ export default function KasirClient({
         </div>
 </div>
 
+      {modal === "promo" ? (
+        <div onClick={closeModal} className="wd-fade" style={{ position: "fixed", inset: 0, background: "rgba(45,32,34,0.5)", backdropFilter: "blur(3px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }}>
+          <div onClick={(e) => e.stopPropagation()} className="wd-slideup" style={{ width: 420, background: "#fff", borderRadius: 18, overflow: "hidden", boxShadow: "0 40px 80px -30px rgba(127,22,40,0.5)" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 22px", borderBottom: "1px solid rgba(45,32,34,0.08)" }}>
+              <div style={{ fontSize: 17, fontWeight: 800 }}>Promosi</div>
+              <button onClick={closeModal} style={{ border: "none", background: "#FFF9F2", width: 34, height: 34, borderRadius: 9, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(45,32,34,0.6)" }}><X size={18} strokeWidth={2.2} /></button>
+            </div>
+            <div style={{ padding: 18, display: "flex", flexDirection: "column", gap: 10 }}>
+              <button type="button" onClick={() => { setPromoId(null); setModal(null); }} style={{ textAlign: "left", border: "1.5px solid rgba(45,32,34,0.12)", borderRadius: 12, background: promoId === null ? "#FFF9F2" : "#fff", padding: "12px 14px", fontFamily: "inherit", cursor: "pointer" }}>
+                <div style={{ fontSize: 14, fontWeight: 800 }}>Tanpa promo</div>
+                <div style={{ fontSize: 12, color: "rgba(45,32,34,0.52)", marginTop: 2 }}>Harga normal tanpa diskon.</div>
+              </button>
+              {promos.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "18px 10px", fontSize: 13, fontWeight: 700, color: "rgba(45,32,34,0.45)" }}>Belum ada promo aktif.</div>
+              ) : promos.map((promo) => {
+                const amount = Math.min(subtotal, promo.type === "percent" ? Math.round((subtotal * promo.value) / 100) : promo.value);
+                return (
+                  <button key={promo.id} type="button" onClick={() => { setPromoId(promo.id); setModal(null); }} style={{ textAlign: "left", border: "1.5px solid " + (promoId === promo.id ? "rgba(169,31,52,0.45)" : "rgba(45,32,34,0.12)"), borderRadius: 12, background: promoId === promo.id ? "#FFF1F2" : "#fff", padding: "12px 14px", fontFamily: "inherit", cursor: "pointer" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
+                      <span style={{ fontSize: 14, fontWeight: 800 }}>{promo.name}</span>
+                      <span style={{ fontFamily: MONO, fontSize: 13, fontWeight: 800, color: "#2E9D64" }}>-{fmt(amount)}</span>
+                    </div>
+                    <div style={{ fontSize: 12, color: "rgba(45,32,34,0.52)", marginTop: 2 }}>{promo.type === "percent" ? `${promo.value}%` : fmt(promo.value)} · dihitung ulang server saat bayar</div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {modal === "held" ? (
+        <div onClick={closeModal} className="wd-fade" style={{ position: "fixed", inset: 0, background: "rgba(45,32,34,0.5)", backdropFilter: "blur(3px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }}>
+          <div onClick={(e) => e.stopPropagation()} className="wd-slideup" style={{ width: 480, maxHeight: "80vh", background: "#fff", borderRadius: 18, overflow: "hidden", boxShadow: "0 40px 80px -30px rgba(127,22,40,0.5)", display: "flex", flexDirection: "column" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 22px", borderBottom: "1px solid rgba(45,32,34,0.08)" }}>
+              <div style={{ fontSize: 17, fontWeight: 800 }}>Order Tersimpan</div>
+              <button onClick={closeModal} style={{ border: "none", background: "#FFF9F2", width: 34, height: 34, borderRadius: 9, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(45,32,34,0.6)" }}><X size={18} strokeWidth={2.2} /></button>
+            </div>
+            <div className="wd-scroll" style={{ padding: 18, overflowY: "auto", display: "flex", flexDirection: "column", gap: 10 }}>
+              {heldOrders.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "28px 10px", fontSize: 13, fontWeight: 700, color: "rgba(45,32,34,0.45)" }}>Belum ada order tersimpan.</div>
+              ) : heldOrders.map((order) => (
+                <button key={order.orderId} type="button" onClick={() => resumeHeldOrder(order)} style={{ textAlign: "left", border: "1.5px solid rgba(45,32,34,0.12)", borderRadius: 12, background: activeHeldOrderId === order.orderId ? "#FFF1F2" : "#fff", padding: "12px 14px", fontFamily: "inherit", cursor: "pointer" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
+                    <span style={{ fontFamily: MONO, fontSize: 13, fontWeight: 800 }}>{order.orderNo}</span>
+                    <span style={{ fontFamily: MONO, fontSize: 13, fontWeight: 800, color: "#A91F34" }}>{fmt(order.total)}</span>
+                  </div>
+                  <div style={{ fontSize: 12.5, fontWeight: 800, color: "#2D2022", marginTop: 5 }}>{order.orderType === "dinein" ? `Meja ${order.tableNo ?? "-"}` : order.orderType === "takeaway" ? `Takeaway · ${order.customerName ?? "-"}` : `${order.deliveryProvider ?? "delivery"} · ${order.channelOrderName ?? "-"}`}</div>
+                  <div style={{ fontSize: 12, color: "rgba(45,32,34,0.52)", marginTop: 2 }}>{order.lines.reduce((n, line) => n + line.quantity, 0)} item{order.promoName ? ` · Promo ${order.promoName}` : ""}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {modal === "done"
         ? (() => {
-            const change = lastCash - lastTotal;
+            const change = lastChange;
             return (
               <div
                 onClick={closeModal}
@@ -1305,6 +1695,35 @@ export default function KasirClient({
                       style={{
                         display: "flex",
                         justifyContent: "space-between",
+                        gap: 12,
+                        fontSize: 13,
+                        color: "rgba(45,32,34,0.6)",
+                        marginBottom: 7,
+                      }}
+                    >
+                      <span>Konteks</span>
+                      <span style={{ fontWeight: 800, color: "#2D2022", textAlign: "right" }}>
+                        {receiptContextSummary(receipt)}
+                      </span>
+                    </div>
+                    {receipt?.discountAmount ? (
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          fontSize: 13,
+                          color: "#2E9D64",
+                          marginBottom: 7,
+                        }}
+                      >
+                        <span>Promo · {receipt.promoName ?? "Diskon"}</span>
+                        <span style={{ fontFamily: MONO, fontWeight: 700 }}>-{fmt(receipt.discountAmount)}</span>
+                      </div>
+                    ) : null}
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
                         fontSize: 13,
                         color: "rgba(45,32,34,0.6)",
                         marginBottom: 7,
@@ -1315,18 +1734,22 @@ export default function KasirClient({
                         {fmt(lastTotal)}
                       </span>
                     </div>
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        fontSize: 13,
-                        color: "rgba(45,32,34,0.6)",
-                        marginBottom: 7,
-                      }}
-                    >
-                      <span>Tunai</span>
-                      <span style={{ fontFamily: MONO }}>{fmt(lastCash)}</span>
-                    </div>
+                    {receipt?.payments.map((line, idx) => (
+                      <div
+                        key={idx}
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          gap: 12,
+                          fontSize: 13,
+                          color: "rgba(45,32,34,0.6)",
+                          marginBottom: 7,
+                        }}
+                      >
+                        <span>{line.channelLabel ?? line.provider ?? line.method}{line.referenceNo ? ` · ${line.referenceNo}` : ""}</span>
+                        <span style={{ fontFamily: MONO }}>{fmt(line.cashReceived ?? line.amount)}</span>
+                      </div>
+                    ))}
                     <div
                       style={{
                         display: "flex",
@@ -1393,22 +1816,25 @@ export default function KasirClient({
             const methods: [PayMethod, string][] = [
               ["tunai", "Tunai"],
               ["qris", "QRIS"],
-              ["debit", "Kartu"],
+              ["card", "Non Tunai > Kartu"],
+              ["transfer", "Transfer Rekening"],
               ["ewallet", "E-Wallet"],
             ];
             const methodIcon: Record<PayMethod, typeof Banknote> = {
               tunai: Banknote,
               qris: QrCode,
-              debit: CreditCard,
+              card: CreditCard,
+              transfer: Banknote,
               ewallet: Wallet,
             };
             const isCash = payMethod === "tunai";
-            const change = cash - total;
+            const targetAmount = splitLines.length > 0 ? splitAmount || Math.max(0, splitRemaining) : total;
+            const change = cash - targetAmount;
             // Block the button mid-charge too, so a double-click can't fire a
             // second checkout (the idempotency key backstops it regardless).
-            const canPay = (!isCash || cash >= total) && !paying;
+            const canPay = (splitLines.length > 0 ? splitRemaining === 0 : (!isCash || cash >= total) && (isCash || !!paymentReference.trim() || payMethod === "qris" || payMethod === "ewallet")) && !paying;
             const quick: [string, number][] = [
-              ["Uang Pas", total],
+              ["Uang Pas", targetAmount],
               ["50rb", 50000],
               ["100rb", 100000],
               ["150rb", 150000],
@@ -1515,7 +1941,7 @@ export default function KasirClient({
                           {fmt(total)}
                         </div>
                         <div style={{ fontSize: 11.5, color: "rgba(255,255,255,0.5)", marginTop: 2 }}>
-                          {cartCount} item · sudah termasuk PPN
+                          {cartCount} item · sudah termasuk PPN{activePromo ? ` · diskon ${fmt(discount)}` : ""}
                         </div>
                       </div>
                       <div
@@ -1565,22 +1991,55 @@ export default function KasirClient({
                         })}
                       </div>
                       {!isCash ? (
-                        <div
-                          style={{
-                            marginTop: 20,
-                            textAlign: "center",
-                            padding: 20,
-                            background: "#FFF9F2",
-                            borderRadius: 12,
-                            border: "1px dashed rgba(45,32,34,0.18)",
-                          }}
-                        >
-                          <div style={{ fontSize: 13.5, fontWeight: 700 }}>Menunggu pembayaran</div>
-                          <div style={{ fontSize: 12.5, color: "rgba(45,32,34,0.55)", marginTop: 4 }}>
-                            Arahkan pelanggan menyelesaikan pembayaran via {payMethod.toUpperCase()}.
-                          </div>
+                        <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 9 }}>
+                          {payMethod === "card" || payMethod === "transfer" ? (
+                            <select
+                              value={paymentProvider}
+                              onChange={(e) => setPaymentProvider(e.target.value)}
+                              style={{ height: 42, border: "1.5px solid rgba(45,32,34,0.14)", borderRadius: 10, padding: "0 11px", fontFamily: "inherit", fontSize: 13.5, fontWeight: 700, background: "#fff" }}
+                            >
+                              {(payMethod === "card" ? CARD_PROVIDERS : TRANSFER_ACCOUNTS).map(([id, label]) => (
+                                <option key={id} value={id}>{label}</option>
+                              ))}
+                            </select>
+                          ) : null}
+                          <input
+                            value={paymentReference}
+                            onChange={(e) => setPaymentReference(e.target.value)}
+                            placeholder="Reference / approval code"
+                            style={{ height: 42, border: "1.5px solid rgba(45,32,34,0.14)", borderRadius: 10, padding: "0 11px", fontFamily: "inherit", fontSize: 13.5, fontWeight: 700, background: "#fff" }}
+                          />
                         </div>
                       ) : null}
+
+                      <div style={{ marginTop: 16, border: "1px dashed rgba(45,32,34,0.18)", borderRadius: 12, padding: 12, background: "#FFF9F2" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>
+                          <div>
+                            <div style={{ fontSize: 12, fontWeight: 800, color: "rgba(45,32,34,0.55)" }}>Pisah Bayar</div>
+                            <div style={{ fontSize: 11.5, fontWeight: 700, color: splitRemaining === 0 ? "#238152" : "#A91F34", marginTop: 2 }}>
+                              Dibayar {fmt(splitPaid)} · Sisa {fmt(Math.max(0, splitRemaining))}
+                            </div>
+                          </div>
+                          <input
+                            value={splitAmount === 0 ? "" : String(splitAmount)}
+                            onChange={(e) => setSplitAmount(Number(e.target.value.replace(/[^0-9]/g, "")) || 0)}
+                            placeholder="Nominal"
+                            inputMode="numeric"
+                            style={{ width: 105, height: 36, border: "1.5px solid rgba(45,32,34,0.14)", borderRadius: 9, padding: "0 9px", fontFamily: MONO, fontSize: 12.5, background: "#fff" }}
+                          />
+                          <button type="button" onClick={addSplitLine} style={{ height: 36, border: "none", borderRadius: 9, background: "#A91F34", color: "#fff", fontFamily: "inherit", fontSize: 12, fontWeight: 800, padding: "0 10px", cursor: "pointer" }}>Tambah</button>
+                        </div>
+                        {splitLines.length > 0 ? (
+                          <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 5 }}>
+                            {splitLines.map((line, idx) => (
+                              <div key={idx} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, fontWeight: 700, color: "rgba(45,32,34,0.7)" }}>
+                                <span>{idx + 1}. {line.channelLabel ?? line.method}{line.referenceNo ? ` · ${line.referenceNo}` : ""}</span>
+                                <span style={{ fontFamily: MONO }}>{fmt(line.amount)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : null}
+                      </div>
                       {payError ? (
                         <div
                           role="alert"

@@ -146,7 +146,6 @@ export type PageType = "kasir" | "board" | "report" | "form" | "table";
 export function pageType(label: string): PageType {
   if (label === "Kasir") return "kasir";
   if (label === "Kitchen Display") return "board";
-  const l = label.toLowerCase();
   return pageTypeForTrail(label, findPath(label));
 }
 

@@ -38,6 +38,20 @@ These are the Phase-0 defaults chosen for this build. They can be revisited, but
 | 14 | Lama simpan data transaksi? | No purge at MVP; financial rows are soft-delete only (BR-005). |
 | 15 | Jumlah kasir bersamaan? | Design for a handful per outlet; no hard cap. |
 
+## Revisi 01 decision overrides (2026-07-21)
+
+Owner update [`docs/update/revisi-01.md`](../update/revisi-01.md) supersedes several conservative Phase-0 defaults. The detailed contract is locked in [`docs/update/implementation/revisi-01/phase-u01-00-analysis-decisions.md`](../update/implementation/revisi-01/phase-u01-00-analysis-decisions.md).
+
+| Phase-0 default | Revisi 01 decision |
+|---|---|
+| Dine-in `tableNo` optional. | Dine-in nomor meja wajib in UI + server validation; nama pemesan optional but strongly prompted. |
+| Split payment out of MVP. | Split payment is now in scope: one order can have multiple payment lines; paid only when successful lines equal `orders.total`. |
+| Marketplace is a manual type badge only. | Delivery requires structured provider `gofood|grabfood|shopeefood` plus marketplace transaction/name field. |
+| One broad non-cash/transfer view in reports. | Owner reports must break down delivery provider, EDC provider, transfer, split composition, promo/discount source, and cashier. |
+| Cashier identity follows login/shift. | Still true: Revisi 01 chooses option A, showing/confirming the logged-in cashier; no free-text cashier name and no unauthenticated actor switch. |
+
+These overrides apply to U01-01 through U01-05 and any later report/payment/order work.
+
 ## Role → capability matrix (locked)
 
 | Capability | Owner | Manager | Kasir | Dapur | Inventory |

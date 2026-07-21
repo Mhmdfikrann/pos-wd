@@ -74,6 +74,24 @@ export interface CategorySalesReportRow {
   revenue: number;
 }
 
+export interface DeliveryProviderReportRow {
+  provider: string;
+  total: number;
+  count: number;
+}
+
+export interface OrderChannelReportRow {
+  channel: string;
+  total: number;
+  count: number;
+}
+
+export interface PromoDiscountReportRow {
+  promoName: string;
+  amount: number;
+  orders: number;
+}
+
 export interface CashierSalesReportRow {
   cashierName: string;
   orders: number;
@@ -138,6 +156,9 @@ export interface OwnerReportSnapshot {
   recentOrders: RecentOrderReportRow[];
   productSales: ProductSalesReportRow[];
   categorySales: CategorySalesReportRow[];
+  deliveryProviders: DeliveryProviderReportRow[];
+  orderChannels: OrderChannelReportRow[];
+  promoDiscounts: PromoDiscountReportRow[];
   cashierSales: CashierSalesReportRow[];
   shiftReconciliation: ShiftReconciliationReportRow[];
   inventory: InventoryReportRow[];
@@ -151,6 +172,7 @@ const paymentLabels: Record<string, string> = {
   qris: "QRIS",
   transfer: "Transfer",
   ewallet: "E-Wallet",
+  card: "Kartu",
 };
 
 const paymentColors: Record<string, string> = {
@@ -158,6 +180,7 @@ const paymentColors: Record<string, string> = {
   QRIS: "#2E9D64",
   Transfer: "#3A5BB0",
   "E-Wallet": "#C67A15",
+  Kartu: "#6E56CF",
 };
 
 export function buildOwnerReport(db: ReportsDb, input: OwnerReportInput): OwnerReportSnapshot {
@@ -172,10 +195,13 @@ export function buildOwnerReport(db: ReportsDb, input: OwnerReportInput): OwnerR
       cashierId: orders.cashierId,
       cashierName: users.name,
       orderType: orders.orderType,
+      deliveryProvider: orders.deliveryProvider,
+      channelOrderName: orders.channelOrderName,
       status: orders.status,
       subtotal: orders.subtotal,
       taxAmount: orders.taxAmount,
       discountAmount: orders.discountAmount,
+      promoName: orders.promoNameSnapshot,
       total: orders.total,
       createdAt: orders.createdAt,
     })
@@ -219,6 +245,8 @@ export function buildOwnerReport(db: ReportsDb, input: OwnerReportInput): OwnerR
         .select({
           orderId: payments.orderId,
           method: payments.method,
+          provider: payments.provider,
+          channelLabel: payments.channelLabel,
           amount: payments.amount,
         })
         .from(payments)
@@ -335,6 +363,9 @@ export function buildOwnerReport(db: ReportsDb, input: OwnerReportInput): OwnerR
   const productSales = aggregateProducts(itemRows);
   const categorySales = aggregateCategories(itemRows);
   const cashierSales = aggregateCashiers(activeOrders, refundRows);
+  const deliveryProviders = aggregateDeliveryProviders(activeOrders);
+  const orderChannels = aggregateOrderChannels(activeOrders);
+  const promoDiscounts = aggregatePromoDiscounts(activeOrders);
   const paymentMethods = aggregatePayments(paymentRows);
   const dailySales = aggregateDaily(activeOrders);
   const inventory = inventoryRows.map((row): InventoryReportRow => ({
@@ -361,6 +392,9 @@ export function buildOwnerReport(db: ReportsDb, input: OwnerReportInput): OwnerR
     recentOrders: buildRecentOrders(activeOrders, paymentRows),
     productSales,
     categorySales,
+    deliveryProviders,
+    orderChannels,
+    promoDiscounts,
     cashierSales,
     shiftReconciliation: shiftRows.map((row) => ({
       ...row,
@@ -396,6 +430,9 @@ function emptyReport(input: OwnerReportInput): OwnerReportSnapshot {
     recentOrders: [],
     productSales: [],
     categorySales: [],
+    deliveryProviders: [],
+    orderChannels: [],
+    promoDiscounts: [],
     cashierSales: [],
     shiftReconciliation: [],
     inventory: [],
@@ -431,12 +468,26 @@ function aggregateDaily(
     }));
 }
 
+function paymentReportLabel(payment: { method: string; provider?: string | null; channelLabel?: string | null }): string {
+  if (payment.channelLabel) return payment.channelLabel;
+  const providers: Record<string, string> = {
+    edc_bca: "EDC BCA",
+    edc_mandiri: "EDC Mandiri",
+    edc_bca_lainnya: "EDC BCA Lainnya",
+    edc_mandiri_lainnya: "EDC Mandiri Lainnya",
+    bca: "Transfer Rekening BCA",
+    mandiri: "Transfer Rekening Mandiri",
+  };
+  if (payment.provider) return providers[payment.provider] ?? payment.provider;
+  return paymentLabels[payment.method] ?? payment.method;
+}
+
 function aggregatePayments(
-  paymentRows: Array<{ method: string; amount: number }>,
+  paymentRows: Array<{ method: string; provider?: string | null; channelLabel?: string | null; amount: number }>,
 ): PaymentMethodReportRow[] {
   const byMethod = new Map<string, { total: number; count: number }>();
   for (const payment of paymentRows) {
-    const label = paymentLabels[payment.method] ?? payment.method;
+    const label = paymentReportLabel(payment);
     const current = byMethod.get(label) ?? { total: 0, count: 0 };
     current.total += payment.amount;
     current.count += 1;
@@ -500,6 +551,63 @@ function aggregateCategories(
   return [...byCategory.values()].sort((a, b) => b.revenue - a.revenue || a.name.localeCompare(b.name));
 }
 
+
+function aggregateDeliveryProviders(
+  ordersInRange: Array<{ orderType: string; deliveryProvider?: string | null; total: number }>,
+): DeliveryProviderReportRow[] {
+  const labels: Record<string, string> = {
+    gofood: "GoFood",
+    grabfood: "GrabFood",
+    shopeefood: "ShopeeFood",
+  };
+  const byProvider = new Map<string, DeliveryProviderReportRow>();
+  for (const order of ordersInRange) {
+    if (order.orderType !== "delivery") continue;
+    const key = order.deliveryProvider ?? "delivery";
+    const current = byProvider.get(key) ?? { provider: labels[key] ?? key, total: 0, count: 0 };
+    current.total += order.total;
+    current.count += 1;
+    byProvider.set(key, current);
+  }
+  return [...byProvider.values()].sort((a, b) => b.total - a.total || a.provider.localeCompare(b.provider));
+}
+
+function channelLabel(order: { orderType: string; deliveryProvider?: string | null }): string {
+  if (order.orderType === "dinein") return "Dine-in";
+  if (order.orderType === "takeaway") return "Take away";
+  const labels: Record<string, string> = { gofood: "Delivery GoFood", grabfood: "Delivery GrabFood", shopeefood: "Delivery ShopeeFood" };
+  return order.deliveryProvider ? labels[order.deliveryProvider] ?? `Delivery ${order.deliveryProvider}` : "Delivery";
+}
+
+function aggregateOrderChannels(
+  ordersInRange: Array<{ orderType: string; deliveryProvider?: string | null; total: number }>,
+): OrderChannelReportRow[] {
+  const byChannel = new Map<string, OrderChannelReportRow>();
+  for (const order of ordersInRange) {
+    const key = channelLabel(order);
+    const current = byChannel.get(key) ?? { channel: key, total: 0, count: 0 };
+    current.total += order.total;
+    current.count += 1;
+    byChannel.set(key, current);
+  }
+  return [...byChannel.values()].sort((a, b) => b.total - a.total || a.channel.localeCompare(b.channel));
+}
+
+function aggregatePromoDiscounts(
+  ordersInRange: Array<{ promoName?: string | null; discountAmount: number }>,
+): PromoDiscountReportRow[] {
+  const byPromo = new Map<string, PromoDiscountReportRow>();
+  for (const order of ordersInRange) {
+    if (order.discountAmount <= 0) continue;
+    const key = order.promoName ?? "Diskon manual/tanpa promo";
+    const current = byPromo.get(key) ?? { promoName: key, amount: 0, orders: 0 };
+    current.amount += order.discountAmount;
+    current.orders += 1;
+    byPromo.set(key, current);
+  }
+  return [...byPromo.values()].sort((a, b) => b.amount - a.amount || a.promoName.localeCompare(b.promoName));
+}
+
 function aggregateCashiers(
   ordersInRange: Array<{ id: string; cashierName: string; total: number }>,
   refundRows: Array<{ orderId: string; amount: number }>,
@@ -523,28 +631,42 @@ function aggregateCashiers(
   return [...byCashier.values()].sort((a, b) => b.netSales - a.netSales || a.cashierName.localeCompare(b.cashierName));
 }
 
+
+function orderContextLabel(order: { orderType: string; deliveryProvider?: string | null; channelOrderName?: string | null }): string {
+  if (order.orderType !== "delivery") return order.orderType;
+  const providerLabels: Record<string, string> = {
+    gofood: "GoFood",
+    grabfood: "GrabFood",
+    shopeefood: "ShopeeFood",
+  };
+  const provider = order.deliveryProvider ? providerLabels[order.deliveryProvider] ?? order.deliveryProvider : "delivery";
+  return order.channelOrderName ? `${provider} · ${order.channelOrderName}` : provider;
+}
+
 function buildRecentOrders(
   ordersInRange: Array<{
     id: string;
     orderNo: string;
     outletName: string;
     orderType: string;
+    deliveryProvider?: string | null;
+    channelOrderName?: string | null;
     status: string;
     total: number;
     createdAt: string;
   }>,
-  paymentRows: Array<{ orderId: string; method: string }>,
+  paymentRows: Array<{ orderId: string; method: string; provider?: string | null; channelLabel?: string | null }>,
 ): RecentOrderReportRow[] {
   const paymentByOrder = new Map<string, string>();
   for (const payment of paymentRows) {
     if (!paymentByOrder.has(payment.orderId)) {
-      paymentByOrder.set(payment.orderId, paymentLabels[payment.method] ?? payment.method);
+      paymentByOrder.set(payment.orderId, paymentReportLabel(payment));
     }
   }
   return ordersInRange.slice(0, 6).map((order) => ({
     id: order.id,
     orderNo: order.orderNo,
-    meta: `${order.outletName} · ${order.orderType}`,
+    meta: `${order.outletName} · ${orderContextLabel(order)}`,
     amount: order.total,
     time: timeLabel(order.createdAt),
     method: paymentByOrder.get(order.id) ?? "-",

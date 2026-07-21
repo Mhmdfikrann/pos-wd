@@ -325,6 +325,13 @@ export const orders = sqliteTable(
       enum: ["dinein", "takeaway", "delivery"],
     }).notNull(),
     tableNo: text("table_no"),
+    /** Snapshot name typed by cashier for dine-in/takeaway calls and receipts. */
+    customerName: text("customer_name"),
+    deliveryProvider: text("delivery_provider", {
+      enum: ["gofood", "grabfood", "shopeefood"],
+    }),
+    /** Marketplace/customer-visible order name/code for delivery channels. */
+    channelOrderName: text("channel_order_name"),
     guestCount: integer("guest_count"),
     status: text("status", {
       enum: ["draft", "held", "paid", "refunded", "void"],
@@ -335,6 +342,8 @@ export const orders = sqliteTable(
     subtotal: integer("subtotal").notNull().default(0),
     taxAmount: integer("tax_amount").notNull().default(0),
     discountAmount: integer("discount_amount").notNull().default(0),
+    promoId: text("promo_id").references(() => discounts.id),
+    promoNameSnapshot: text("promo_name_snapshot"),
     total: integer("total").notNull().default(0),
     note: text("note"),
     ...timestamps,
@@ -373,14 +382,18 @@ export const payments = sqliteTable(
     /** idempotency key (BR-003) */
     idempotencyKey: text("idempotency_key").notNull().unique(),
     method: text("method", {
-      enum: ["cash", "qris", "transfer", "ewallet"],
+      enum: ["cash", "qris", "transfer", "ewallet", "card"],
     }).notNull(),
     /** integer rupiah */
     amount: integer("amount").notNull(),
     /** integer rupiah (for cash) */
     cashReceived: integer("cash_received"),
     changeAmount: integer("change_amount"),
+    provider: text("provider"),
+    channelLabel: text("channel_label"),
     referenceNo: text("reference_no"),
+    lineNo: integer("line_no"),
+    requestIdempotencyKey: text("request_idempotency_key"),
     status: text("status", { enum: ["pending", "success", "failed"] })
       .notNull()
       .default("success"),

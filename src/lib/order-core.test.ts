@@ -27,8 +27,9 @@ import {
   recipes,
   recipeItems,
   stockMovements,
+  discounts,
 } from "@/db/schema";
-import { checkout, type CheckoutDb, type CheckoutInput } from "@/lib/order-core";
+import { checkout, saveHeldOrder, listHeldOrders, type CheckoutDb, type CheckoutInput } from "@/lib/order-core";
 
 let db: CheckoutDb;
 
@@ -49,6 +50,7 @@ function seed() {
   db.insert(shifts)
     .values({ id: "s1", outletId: "o1", cashierId: "u1", status: "open", openingCash: 100000 })
     .run();
+  db.insert(discounts).values({ id: "promo10", name: "Promo 10%", type: "percent", value: 10, active: true }).run();
 }
 
 function baseInput(overrides: Partial<CheckoutInput> = {}): CheckoutInput {
@@ -58,6 +60,7 @@ function baseInput(overrides: Partial<CheckoutInput> = {}): CheckoutInput {
     cashierId: "u1",
     cart: [{ productId: "p1", quantity: 2 }],
     orderType: "dinein",
+    tableNo: "A-12",
     taxPercent: 11,
     payment: { method: "cash", cashReceived: 50000 },
     idempotencyKey: "key-1",
@@ -101,6 +104,155 @@ describe("checkout — totals & snapshots", () => {
     // The cart only carries productId + quantity; price is read from the DB.
     const r = checkout(db, baseInput({ cart: [{ productId: "p2", quantity: 1 }], idempotencyKey: "k-price" }));
     expect(r.subtotal).toBe(24000);
+  });
+});
+
+
+
+describe("checkout — order context fields", () => {
+  it("stores structured dine-in context", () => {
+    const r = checkout(db, baseInput({ tableNo: " B-07 ", customerName: " Sari " }));
+    const row = db.select().from(orders).where(eq(orders.id, r.orderId)).get();
+    expect(row?.tableNo).toBe("B-07");
+    expect(row?.customerName).toBe("Sari");
+    expect(row?.deliveryProvider).toBeNull();
+    expect(r.tableNo).toBe("B-07");
+    expect(r.customerName).toBe("Sari");
+  });
+
+  it("requires customer name for take away", () => {
+    expect(() =>
+      checkout(db, baseInput({ orderType: "takeaway", tableNo: null, customerName: "   ", idempotencyKey: "takeaway-empty" })),
+    ).toThrow(/Nama pemesan/i);
+    expect(db.select().from(orders).all()).toHaveLength(0);
+  });
+
+  it("stores structured delivery provider and marketplace order name", () => {
+    const r = checkout(db, baseInput({
+      orderType: "delivery",
+      tableNo: null,
+      customerName: null,
+      deliveryProvider: "grabfood",
+      channelOrderName: " GF-231 ",
+      idempotencyKey: "delivery-ok",
+    }));
+    const row = db.select().from(orders).where(eq(orders.id, r.orderId)).get();
+    expect(row?.deliveryProvider).toBe("grabfood");
+    expect(row?.channelOrderName).toBe("GF-231");
+    expect(r.deliveryProvider).toBe("grabfood");
+    expect(r.channelOrderName).toBe("GF-231");
+  });
+
+  it("rejects delivery provider on dine-in", () => {
+    expect(() =>
+      checkout(db, baseInput({ deliveryProvider: "gofood", channelOrderName: "GF-1", idempotencyKey: "bad-context" })),
+    ).toThrow(/Provider delivery/i);
+    expect(db.select().from(orders).all()).toHaveLength(0);
+  });
+});
+
+
+
+
+
+describe("checkout — split payment lines", () => {
+  it("stores multiple payment lines and computes cash change", () => {
+    const r = checkout(db, baseInput({
+      idempotencyKey: "split-1",
+      payment: undefined,
+      payments: [
+        { method: "cash", amount: 10000, cashReceived: 20000 },
+        { method: "card", provider: "edc_bca", channelLabel: "EDC BCA", amount: 29960, referenceNo: "APP-1" },
+      ],
+    }));
+    expect(r.total).toBe(39960);
+    expect(r.payments).toHaveLength(2);
+    expect(r.payments[0].changeAmount).toBe(10000);
+    const rows = db.select().from(payments).where(eq(payments.orderId, r.orderId)).all();
+    expect(rows).toHaveLength(2);
+    expect(rows.map((row) => row.requestIdempotencyKey)).toEqual(["split-1", "split-1"]);
+    expect(rows[1].provider).toBe("edc_bca");
+  });
+
+  it("rejects underpaid split payments and missing non-cash reference", () => {
+    expect(() => checkout(db, baseInput({ idempotencyKey: "split-under", payment: undefined, payments: [
+      { method: "cash", amount: 10000, cashReceived: 10000 },
+      { method: "card", provider: "edc_bca", amount: 20000, referenceNo: "APP-2" },
+    ] }))).toThrow(/Total payment/i);
+    expect(() => checkout(db, baseInput({ idempotencyKey: "split-ref", payment: undefined, payments: [
+      { method: "card", provider: "edc_bca", amount: 39960 },
+    ] }))).toThrow(/Reference/i);
+    expect(db.select().from(orders).all()).toHaveLength(0);
+  });
+
+  it("replays split payment by request idempotency key", () => {
+    const input = baseInput({
+      idempotencyKey: "split-replay",
+      payment: undefined,
+      payments: [
+        { method: "transfer", provider: "bca", channelLabel: "Transfer Rekening BCA", amount: 39960, referenceNo: "TRF-1" },
+      ],
+    });
+    const first = checkout(db, input);
+    const second = checkout(db, input);
+    expect(second.orderId).toBe(first.orderId);
+    expect(second.replayed).toBe(true);
+    expect(db.select().from(payments).all()).toHaveLength(1);
+  });
+});
+
+describe("held order and promo", () => {
+  it("saves, lists, resumes, and pays the same held order without duplicate order/payment", () => {
+    const held = saveHeldOrder(db, {
+      outletId: "o1",
+      shiftId: "s1",
+      cashierId: "u1",
+      cart: [{ productId: "p1", quantity: 2 }],
+      orderType: "dinein",
+      tableNo: "C-01",
+      customerName: "Ayu",
+      taxPercent: 11,
+      promoId: "promo10",
+    });
+
+    expect(held.discountAmount).toBe(3600);
+    expect(db.select().from(payments).all()).toHaveLength(0);
+    expect(db.select().from(kitchenTickets).all()).toHaveLength(0);
+    expect(listHeldOrders(db, "o1")[0].orderId).toBe(held.orderId);
+
+    const paid = checkout(db, baseInput({
+      heldOrderId: held.orderId,
+      tableNo: "C-01",
+      customerName: "Ayu",
+      promoId: "promo10",
+      idempotencyKey: "held-pay",
+      payment: { method: "cash", cashReceived: 50000 },
+    }));
+
+    expect(paid.orderId).toBe(held.orderId);
+    expect(paid.discountAmount).toBe(3600);
+    expect(paid.promoName).toBe("Promo 10%");
+    expect(db.select().from(orders).all()).toHaveLength(1);
+    expect(db.select().from(payments).all()).toHaveLength(1);
+    expect(db.select().from(kitchenTickets).all()).toHaveLength(1);
+    expect(listHeldOrders(db, "o1")).toHaveLength(0);
+
+    const replay = checkout(db, baseInput({
+      heldOrderId: held.orderId,
+      tableNo: "C-01",
+      customerName: "Ayu",
+      promoId: "promo10",
+      idempotencyKey: "held-pay",
+      payment: { method: "cash", cashReceived: 50000 },
+    }));
+    expect(replay.orderId).toBe(held.orderId);
+    expect(replay.replayed).toBe(true);
+    expect(db.select().from(payments).all()).toHaveLength(1);
+  });
+
+  it("rejects inactive or unknown promo ids", () => {
+    expect(() => checkout(db, baseInput({ promoId: "missing", idempotencyKey: "bad-promo" }))).toThrow(/Promo/i);
+    expect(db.select().from(orders).all()).toHaveLength(0);
   });
 });
 

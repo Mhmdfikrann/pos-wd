@@ -112,7 +112,14 @@ function seedOrder(input: {
   subtotal?: number;
   tax?: number;
   discount?: number;
-  method?: "cash" | "qris" | "transfer" | "ewallet";
+  method?: "cash" | "qris" | "transfer" | "ewallet" | "card";
+  provider?: string | null;
+  channelLabel?: string | null;
+  orderType?: "dinein" | "takeaway" | "delivery";
+  deliveryProvider?: "gofood" | "grabfood" | "shopeefood" | null;
+  channelOrderName?: string | null;
+  promoName?: string | null;
+  splitPayments?: Array<{ id: string; method: "cash" | "qris" | "transfer" | "ewallet" | "card"; amount: number; provider?: string | null; channelLabel?: string | null; referenceNo?: string | null; cashReceived?: number | null; changeAmount?: number | null }>;
   at: string;
   items?: Array<{ id: string; productId: string; name: string; sku: string; price: number; qty: number }>;
 }) {
@@ -123,7 +130,10 @@ function seedOrder(input: {
       outletId: input.outletId ?? "outlet_a",
       shiftId: input.shiftId ?? "shift_a",
       cashierId: input.cashierId ?? "u_sinta",
-      orderType: "dinein",
+      orderType: input.orderType ?? "dinein",
+      deliveryProvider: input.deliveryProvider ?? null,
+      channelOrderName: input.channelOrderName ?? null,
+      promoNameSnapshot: input.promoName ?? null,
       status: input.status ?? "paid",
       subtotal: input.subtotal ?? input.total,
       taxAmount: input.tax ?? 0,
@@ -133,32 +143,50 @@ function seedOrder(input: {
       updatedAt: input.at,
     })
     .run();
-  db.insert(orderItems)
-    .values(
-      (input.items ?? []).map((item) => ({
-        id: item.id,
+  const itemValues = (input.items ?? []).map((item) => ({
+    id: item.id,
+    orderId: input.id,
+    productId: item.productId,
+    nameSnapshot: item.name,
+    skuSnapshot: item.sku,
+    priceSnapshot: item.price,
+    quantity: item.qty,
+  }));
+  if (itemValues.length) db.insert(orderItems).values(itemValues).run();
+  const paymentValues = input.splitPayments?.length
+    ? input.splitPayments.map((payment, idx) => ({
+        id: payment.id,
         orderId: input.id,
-        productId: item.productId,
-        nameSnapshot: item.name,
-        skuSnapshot: item.sku,
-        priceSnapshot: item.price,
-        quantity: item.qty,
-      })),
-    )
-    .run();
-  db.insert(payments)
-    .values({
-      id: `pay_${input.id}`,
-      orderId: input.id,
-      idempotencyKey: `idem_${input.id}`,
-      method: input.method ?? "cash",
-      amount: input.total,
-      cashReceived: input.method === "cash" || !input.method ? input.total : null,
-      status: "success",
-      createdAt: input.at,
-      updatedAt: input.at,
-    })
-    .run();
+        idempotencyKey: `idem_${input.id}_${idx + 1}`,
+        requestIdempotencyKey: `idem_${input.id}`,
+        lineNo: idx + 1,
+        method: payment.method,
+        provider: payment.provider ?? null,
+        channelLabel: payment.channelLabel ?? null,
+        referenceNo: payment.referenceNo ?? null,
+        amount: payment.amount,
+        cashReceived: payment.cashReceived ?? (payment.method === "cash" ? payment.amount : null),
+        changeAmount: payment.changeAmount ?? null,
+        status: "success" as const,
+        createdAt: input.at,
+        updatedAt: input.at,
+      }))
+    : [{
+        id: `pay_${input.id}`,
+        orderId: input.id,
+        idempotencyKey: `idem_${input.id}`,
+        requestIdempotencyKey: `idem_${input.id}`,
+        lineNo: 1,
+        method: input.method ?? "cash",
+        provider: input.provider ?? null,
+        channelLabel: input.channelLabel ?? null,
+        amount: input.total,
+        cashReceived: input.method === "cash" || !input.method ? input.total : null,
+        status: "success" as const,
+        createdAt: input.at,
+        updatedAt: input.at,
+      }];
+  db.insert(payments).values(paymentValues).run();
 }
 
 function seedReportData() {
@@ -282,6 +310,47 @@ describe("buildOwnerReport", () => {
       ["Tunai", 111000, 1, 67],
       ["QRIS", 55000, 1, 33],
     ]);
+  });
+
+  it("separates order channels, promo discounts, and split payment lines without double-counting sales", () => {
+    seedOrder({
+      id: "order_gofood",
+      no: "TRX-GF",
+      total: 70000,
+      subtotal: 80000,
+      discount: 10000,
+      promoName: "Promo GoFood",
+      orderType: "delivery",
+      deliveryProvider: "gofood",
+      channelOrderName: "GF-42",
+      method: "transfer",
+      provider: "bca",
+      channelLabel: "Transfer Rekening BCA",
+      at: "2026-07-02T10:00:00.000Z",
+    });
+    seedOrder({
+      id: "order_split",
+      no: "TRX-SPLIT",
+      total: 90000,
+      orderType: "dinein",
+      splitPayments: [
+        { id: "pay_split_cash", method: "cash", amount: 40000, cashReceived: 50000, changeAmount: 10000 },
+        { id: "pay_split_card", method: "card", provider: "edc_mandiri", channelLabel: "EDC Mandiri", amount: 50000, referenceNo: "APP-9" },
+      ],
+      at: "2026-07-02T11:00:00.000Z",
+    });
+
+    const report = buildOwnerReport(db, reportInput);
+    expect(report.summary.grossSales).toBe(326000);
+    expect(report.orderChannels.map((row) => [row.channel, row.count, row.total])).toContainEqual(["Delivery GoFood", 1, 70000]);
+    expect(report.promoDiscounts).toContainEqual({ promoName: "Promo GoFood", amount: 10000, orders: 1 });
+    expect(report.paymentMethods.map((row) => [row.method, row.total])).toEqual(
+      expect.arrayContaining([
+        ["Transfer Rekening BCA", 70000],
+        ["EDC Mandiri", 50000],
+        ["Tunai", 151000],
+      ]),
+    );
   });
 
   it("includes shift reconciliation, current inventory, and finance event reports", () => {

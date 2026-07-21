@@ -98,6 +98,43 @@ export default function OpenShiftScreen({
           </div>
         </div>
 
+        <div
+          aria-label={`Kasir aktif: ${cashierName}`}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+            border: "1px solid rgba(169,31,52,0.14)",
+            borderRadius: 12,
+            background: "#FFF9F2",
+            padding: "10px 12px",
+            marginBottom: 16,
+          }}
+        >
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase", color: "rgba(45,32,34,0.42)" }}>
+              Kasir aktif
+            </div>
+            <div style={{ fontSize: 14, fontWeight: 800, color: "#2D2022", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {cashierName}
+            </div>
+          </div>
+          <span
+            style={{
+              flexShrink: 0,
+              borderRadius: 999,
+              background: "#E4F4EC",
+              color: "#238152",
+              padding: "6px 9px",
+              fontSize: 11,
+              fontWeight: 800,
+            }}
+          >
+            dari session
+          </span>
+        </div>
+
         {noOutlet ? (
           <div
             style={{ background: "#FBE7E7", color: "#B83636", borderRadius: 10, padding: "12px 14px", fontSize: 13, fontWeight: 600 }}

@@ -8,7 +8,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { LogIn, Loader2 } from "lucide-react";
+import { Eye, EyeOff, LogIn, Loader2 } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import { safeInternalNextPath } from "@/lib/auth-redirect";
 import { tokens } from "@/lib/tokens";
@@ -19,6 +19,7 @@ export function LoginForm({ next }: { next?: string }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const dest = safeInternalNextPath(next);
 
@@ -84,14 +85,25 @@ export function LoginForm({ next }: { next?: string }) {
           <label className="block text-xs font-bold mt-4 mb-1.5" style={{ color: "rgba(45,32,34,0.6)" }}>
             Password
           </label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete="current-password"
-            className="w-full rounded-xl border border-black/[0.1] px-3.5 py-2.5 text-sm outline-none focus:border-[#A91F34] transition-colors"
-            placeholder="••••••••"
-          />
+          <div className="relative">
+            <input
+              type={showPassword ? "text" : "password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
+              className="w-full rounded-xl border border-black/[0.1] py-2.5 pl-3.5 pr-11 text-sm outline-none focus:border-[#A91F34] transition-colors"
+              placeholder="••••••••"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((shown) => !shown)}
+              aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
+              aria-pressed={showPassword}
+              className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex h-8 w-8 items-center justify-center rounded-lg text-[#5A4B4D] transition-colors hover:bg-black/[0.04] focus:outline-none focus:ring-2 focus:ring-[#A91F34]/30"
+            >
+              {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+            </button>
+          </div>
 
           {error && (
             <div

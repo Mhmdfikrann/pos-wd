@@ -31,6 +31,7 @@ interface Ticket {
   no: string;
   type: TicketType;
   slot: string;
+  contextLabel: string;
   base: number;
   status: Status;
   sourceStatus: KitchenStatus;
@@ -76,6 +77,7 @@ function mapTickets(rows: KitchenTicketView[], doneMap: Record<string, boolean>)
     no: row.orderNo.replace(/^TRX-/, ""),
     type: row.orderType,
     slot: row.slot,
+    contextLabel: row.contextLabel,
     base: Math.max(0, Math.floor((nowMs - Date.parse(row.createdAt)) / 1000)),
     status: row.boardStatus,
     sourceStatus: row.status,
@@ -623,9 +625,14 @@ function TicketCard({
           padding: "9px 14px 4px",
         }}
       >
-        <span style={{ fontSize: "13px", fontWeight: 700, color: "#A91F34" }}>
-          {t.slot}
-        </span>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: "13px", fontWeight: 800, color: "#A91F34", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {t.slot}
+          </div>
+          <div style={{ fontSize: "11.5px", fontWeight: 700, color: "rgba(45,32,34,0.52)", marginTop: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {t.contextLabel}
+          </div>
+        </div>
         <span
           style={{ fontFamily: MONO, fontSize: "11.5px", color: "rgba(45,32,34,0.5)" }}
         >

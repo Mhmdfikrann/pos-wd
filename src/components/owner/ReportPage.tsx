@@ -216,6 +216,32 @@ function reportTableData(label: string, report: OwnerReportSnapshot): TableData 
     };
   }
 
+  if (/channel|saluran|delivery|gofood|grabfood|shopee|ojek|tipe pesanan/.test(l)) {
+    return {
+      kpis: summaryKpis,
+      columns: [
+        { k: "c", label: "Channel", w: "2fr", kind: "strong" },
+        { k: "o", label: "Order", w: "1fr", align: "right", kind: "mono" },
+        { k: "t", label: "Total", w: "1.4fr", align: "right", kind: "mono" },
+      ],
+      rows: report.orderChannels.map((row) => ({ c: row.channel, o: String(row.count), t: formatRupiah(row.total) })),
+      total: report.orderChannels.length,
+    };
+  }
+
+  if (/promo|promosi/.test(l)) {
+    return {
+      kpis: summaryKpis,
+      columns: [
+        { k: "p", label: "Promo/Diskon", w: "2fr", kind: "strong" },
+        { k: "o", label: "Order", w: "1fr", align: "right", kind: "mono" },
+        { k: "a", label: "Nominal", w: "1.4fr", align: "right", kind: "mono" },
+      ],
+      rows: report.promoDiscounts.map((row) => ({ p: row.promoName, o: String(row.orders), a: formatRupiah(row.amount) })),
+      total: report.promoDiscounts.length,
+    };
+  }
+
   if (/terminal|pembayaran|settlement/.test(l)) {
     return {
       kpis: summaryKpis,

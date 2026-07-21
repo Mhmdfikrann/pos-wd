@@ -43,6 +43,27 @@
       "when": 1784475879808,
       "tag": "0005_married_sunspot",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1784610978652,
+      "tag": "0006_romantic_true_believers",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1784611715050,
+      "tag": "0007_oval_ben_parker",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1784612639201,
+      "tag": "0008_rapid_pestilence",
+      "breakpoints": true
     }
   ]
 }

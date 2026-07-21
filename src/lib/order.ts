@@ -12,16 +12,24 @@ import "server-only";
 import { db } from "@/db";
 import {
   checkout as checkoutCore,
+  saveHeldOrder as saveHeldOrderCore,
+  listHeldOrders as listHeldOrdersCore,
   buildReceipt as buildReceiptCore,
   type CheckoutInput,
+  type HeldOrderInput,
+  type HeldOrderView,
   type Receipt,
 } from "@/lib/order-core";
 
 export type {
   OrderType,
+  DeliveryProvider,
   PaymentMethod,
+  PaymentLineInput,
   CartLine,
   CheckoutInput,
+  HeldOrderInput,
+  HeldOrderView,
   Receipt,
   ReceiptLine,
 } from "@/lib/order-core";
@@ -29,6 +37,16 @@ export type {
 /** Execute a checkout against the app DB (atomic, idempotent). */
 export function checkout(input: CheckoutInput): Receipt {
   return checkoutCore(db, input);
+}
+
+/** Create or update a held order without payment/kitchen/stock side effects. */
+export function saveHeldOrder(input: HeldOrderInput): HeldOrderView {
+  return saveHeldOrderCore(db, input);
+}
+
+/** List held orders for one already-scoped outlet. */
+export function listHeldOrders(outletId: string): HeldOrderView[] {
+  return listHeldOrdersCore(db, outletId);
 }
 
 /** Assemble receipt data for an order (reprint, FR-007). */

@@ -19,6 +19,8 @@ import { listCategories, listProducts } from "@/lib/catalog";
 import { requireRoute } from "@/lib/session";
 import { getActiveShiftForCashier } from "@/lib/shift";
 import { listOutlets } from "@/lib/outlets";
+import { listActivePromos } from "@/lib/promotions";
+import { listHeldOrders } from "@/lib/order";
 
 export default async function KasirPage() {
   const session = await requireRoute("/kasir");
@@ -32,10 +34,12 @@ export default async function KasirPage() {
   }
 
   // Active shift → render the POS scoped to that shift's outlet.
-  const [cats, prods, outlets] = await Promise.all([
+  const [cats, prods, outlets, promos, heldOrders] = await Promise.all([
     listCategories(),
     listProducts(),
     listOutlets([active.outletId]),
+    listActivePromos(),
+    Promise.resolve(listHeldOrders(active.outletId)),
   ]);
   const outletName = outlets[0]?.name ?? "Outlet";
   const taxPercent = outlets[0]?.taxPercent ?? 11;
@@ -61,6 +65,8 @@ export default async function KasirPage() {
       shiftId={active.id}
       shiftOpenedAt={active.openedAt}
       taxPercent={taxPercent}
+      promos={promos}
+      heldOrders={heldOrders}
     />
   );
 }

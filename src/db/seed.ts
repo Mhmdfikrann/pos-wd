@@ -22,6 +22,7 @@ import {
   users,
   userOutlets,
   accounts,
+  discounts,
 } from "./schema";
 import { seedCatalog } from "./seed-catalog";
 import { seedInventory } from "./seed-inventory";
@@ -124,6 +125,15 @@ async function main() {
 
   console.log("Seeding inventory (items + stock + recipes)...");
   await seedInventory(db, OUTLET_ID);
+
+  console.log("Seeding promo discounts...");
+  await db
+    .insert(discounts)
+    .values([
+      { id: "promo_grand_opening_10", name: "Grand Opening 10%", type: "percent", value: 10, active: true },
+      { id: "promo_dimsum_5k", name: "Potongan Dimsum 5rb", type: "amount", value: 5000, active: true },
+    ])
+    .onConflictDoNothing();
 
   console.log("Seeding users (drizzle + better-auth scrypt hash)...");
   for (const u of USERS) {

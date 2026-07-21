@@ -40,6 +40,10 @@ export interface KitchenTicketView {
   outletId: string;
   orderType: "dinein" | "takeaway" | "delivery";
   slot: string;
+  customerName: string | null;
+  deliveryProvider: "gofood" | "grabfood" | "shopeefood" | null;
+  channelOrderName: string | null;
+  contextLabel: string;
   status: KitchenStatus;
   boardStatus: KitchenBoardStatus;
   createdAt: string;
@@ -89,6 +93,9 @@ export function listKitchenTickets(
       orderNo: orders.orderNo,
       orderType: orders.orderType,
       tableNo: orders.tableNo,
+      customerName: orders.customerName,
+      deliveryProvider: orders.deliveryProvider,
+      channelOrderName: orders.channelOrderName,
     })
     .from(kitchenTickets)
     .innerJoin(orders, eq(kitchenTickets.orderId, orders.id))
@@ -138,7 +145,11 @@ export function listKitchenTickets(
         orderNo: r.orderNo,
         outletId: r.outletId,
         orderType: r.orderType,
-        slot: slotForOrder(r.orderType, r.tableNo, r.orderNo),
+        slot: slotForOrder(r.orderType, r.tableNo, r.orderNo, r.channelOrderName),
+        customerName: r.customerName,
+        deliveryProvider: r.deliveryProvider,
+        channelOrderName: r.channelOrderName,
+        contextLabel: contextForOrder(r.orderType, r.tableNo, r.customerName, r.deliveryProvider, r.channelOrderName),
         status: r.status,
         boardStatus: toBoardStatus(r.status) as KitchenBoardStatus,
         createdAt: r.createdAt,
@@ -210,6 +221,10 @@ export function transitionKitchenTicket(
     outletId: current.outletId,
     orderType: "takeaway",
     slot: "",
+    customerName: null,
+    deliveryProvider: null,
+    channelOrderName: null,
+    contextLabel: "Takeaway",
     status: input.toStatus,
     boardStatus: "siap",
     createdAt: current.createdAt,
@@ -224,8 +239,38 @@ export function transitionKitchenTicket(
   };
 }
 
-function slotForOrder(orderType: "dinein" | "takeaway" | "delivery", tableNo: string | null, orderNo: string): string {
+const PROVIDER_LABEL: Record<"gofood" | "grabfood" | "shopeefood", string> = {
+  gofood: "GoFood",
+  grabfood: "GrabFood",
+  shopeefood: "ShopeeFood",
+};
+
+function slotForOrder(
+  orderType: "dinein" | "takeaway" | "delivery",
+  tableNo: string | null,
+  orderNo: string,
+  channelOrderName?: string | null,
+): string {
   if (orderType === "dinein") return tableNo ? `Meja ${tableNo}` : "Dine-in";
-  if (orderType === "takeaway") return tableNo ? `Antrean ${tableNo}` : "Takeaway";
-  return tableNo ?? `Delivery ${orderNo}`;
+  if (orderType === "takeaway") return "Takeaway";
+  return channelOrderName ?? `Delivery ${orderNo}`;
+}
+
+function contextForOrder(
+  orderType: "dinein" | "takeaway" | "delivery",
+  tableNo: string | null,
+  customerName: string | null,
+  deliveryProvider: "gofood" | "grabfood" | "shopeefood" | null,
+  channelOrderName: string | null,
+): string {
+  if (orderType === "dinein") {
+    return [tableNo ? `Meja ${tableNo}` : "Dine-in", customerName ? `a.n. ${customerName}` : null]
+      .filter(Boolean)
+      .join(" · ");
+  }
+  if (orderType === "takeaway") {
+    return customerName ? `Takeaway · a.n. ${customerName}` : "Takeaway";
+  }
+  const provider = deliveryProvider ? PROVIDER_LABEL[deliveryProvider] : "Delivery";
+  return [provider, channelOrderName].filter(Boolean).join(" · ");
 }

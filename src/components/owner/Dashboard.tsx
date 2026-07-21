@@ -115,6 +115,17 @@ export function Dashboard({ report, userName, dateRange, onDateRange }: Dashboar
               </div>
             ))}
           </div>
+          {report.orderChannels.length ? (
+            <div style={{ marginTop: 18, paddingTop: 14, borderTop: "1px dashed rgba(35,32,31,0.12)" }}>
+              <div style={{ fontSize: "12px", fontWeight: 800, color: "rgba(35,32,31,0.45)", marginBottom: 8 }}>Channel Order</div>
+              {report.orderChannels.slice(0, 4).map((row) => (
+                <div key={row.channel} style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", marginTop: 5 }}>
+                  <span style={{ fontWeight: 700 }}>{row.channel}</span>
+                  <span style={{ fontFamily: MONO, fontWeight: 700 }}>{formatRupiah(row.total)}</span>
+                </div>
+              ))}
+            </div>
+          ) : null}
         </div>
       </div>
 

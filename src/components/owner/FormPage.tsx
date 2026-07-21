@@ -215,21 +215,24 @@ export function FormPage({ label, crumbPath }: { label: string; crumbPath?: stri
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    const raw = window.localStorage.getItem(storageKey);
-    if (!raw) {
-      setValues(initial);
-      setSavedValues(initial);
-      return;
-    }
+    const raf = requestAnimationFrame(() => {
+      const raw = window.localStorage.getItem(storageKey);
+      if (!raw) {
+        setValues(initial);
+        setSavedValues(initial);
+        return;
+      }
 
-    try {
-      const parsed = { ...initial, ...JSON.parse(raw) } as Record<string, FieldValue>;
-      setValues(parsed);
-      setSavedValues(parsed);
-    } catch {
-      setValues(initial);
-      setSavedValues(initial);
-    }
+      try {
+        const parsed = { ...initial, ...JSON.parse(raw) } as Record<string, FieldValue>;
+        setValues(parsed);
+        setSavedValues(parsed);
+      } catch {
+        setValues(initial);
+        setSavedValues(initial);
+      }
+    });
+    return () => cancelAnimationFrame(raf);
   }, [initial, storageKey]);
 
   const dirty = JSON.stringify(values) !== JSON.stringify(savedValues);

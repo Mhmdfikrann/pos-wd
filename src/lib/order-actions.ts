@@ -24,11 +24,15 @@ import { writeAudit } from "@/lib/audit";
 import { getActiveShift } from "@/lib/shift";
 import {
   checkout,
+  saveHeldOrder,
   buildReceipt,
   type CartLine,
   type OrderType,
+  type DeliveryProvider,
   type PaymentMethod,
+  type PaymentLineInput,
   type Receipt,
+  type HeldOrderView,
 } from "@/lib/order";
 import { db } from "@/db";
 import { payments } from "@/db/schema";
@@ -40,18 +44,23 @@ export type ActionResult<T = void> = ({ ok: true } & T) | { ok: false; error: st
 
 export interface CheckoutRequest {
   outletId: string;
+  heldOrderId?: string | null;
   cart: CartLine[];
   orderType: OrderType;
   tableNo?: string | null;
+  customerName?: string | null;
+  deliveryProvider?: DeliveryProvider | null;
+  channelOrderName?: string | null;
   guestCount?: number | null;
   orderNote?: string | null;
   taxPercent: number;
-  discountAmount?: number;
-  payment: {
+  promoId?: string | null;
+  payment?: {
     method: PaymentMethod;
     cashReceived: number;
     referenceNo?: string | null;
   };
+  payments?: PaymentLineInput[];
   /** BR-003 — generated once per checkout attempt on the client. */
   idempotencyKey: string;
 }
@@ -72,28 +81,63 @@ export async function actionCheckout(
 
     const receipt = checkout({
       outletId: req.outletId,
+      heldOrderId: req.heldOrderId,
       shiftId: shift.id,
       cashierId: session.userId,
       cart: req.cart,
       orderType: req.orderType,
       tableNo: req.tableNo,
+      customerName: req.customerName,
+      deliveryProvider: req.deliveryProvider,
+      channelOrderName: req.channelOrderName,
       guestCount: req.guestCount,
       orderNote: req.orderNote,
       taxPercent: req.taxPercent,
-      discountAmount: req.discountAmount,
+      promoId: req.promoId,
       payment: req.payment,
+      payments: req.payments,
       idempotencyKey: req.idempotencyKey,
     });
 
     // Audit only a fresh sale, not an idempotent replay.
     if (!receipt.replayed) {
+      if (req.heldOrderId) {
+        await writeAudit({
+          action: "order.resumed",
+          actorId: session.userId,
+          outletId: req.outletId,
+          entity: "order",
+          entityId: receipt.orderId,
+          detail: { orderNo: receipt.orderNo },
+        });
+      }
+      if (receipt.promoId) {
+        await writeAudit({
+          action: "promotion.applied",
+          actorId: session.userId,
+          outletId: req.outletId,
+          entity: "order",
+          entityId: receipt.orderId,
+          detail: { orderNo: receipt.orderNo, promoId: receipt.promoId, promoName: receipt.promoName, discountAmount: receipt.discountAmount },
+        });
+      }
+      if (receipt.payments.length > 1) {
+        await writeAudit({
+          action: "payment.split.accepted",
+          actorId: session.userId,
+          outletId: req.outletId,
+          entity: "order",
+          entityId: receipt.orderId,
+          detail: { orderNo: receipt.orderNo, lines: receipt.payments.map((line) => ({ method: line.method, provider: line.provider, amount: line.amount })) },
+        });
+      }
       await writeAudit({
         action: "order.paid",
         actorId: session.userId,
         outletId: req.outletId,
         entity: "order",
         entityId: receipt.orderId,
-        detail: { orderNo: receipt.orderNo, total: receipt.total, method: receipt.payment.method },
+        detail: { orderNo: receipt.orderNo, total: receipt.total, payments: receipt.payments.map((line) => ({ method: line.method, provider: line.provider, amount: line.amount })), heldOrderId: req.heldOrderId ?? null, promoId: receipt.promoId, discountAmount: receipt.discountAmount },
       });
     }
 
@@ -114,7 +158,7 @@ export async function actionCheckout(
       const prior = db
         .select({ orderId: payments.orderId })
         .from(payments)
-        .where(eq(payments.idempotencyKey, req.idempotencyKey))
+        .where(eq(payments.requestIdempotencyKey, req.idempotencyKey))
         .get();
       if (prior) {
         return { ok: true, receipt: { ...buildReceipt(prior.orderId), replayed: true } };
@@ -122,10 +166,76 @@ export async function actionCheckout(
     }
 
     // User-friendly validation messages from the service pass through.
-    if (/kosong|shift terbuka|tidak ditemukan|tidak tersedia|tunai kurang|rupiah|Kuantitas/i.test(msg)) {
+    if (/kosong|shift terbuka|tidak ditemukan|tidak tersedia|tunai kurang|rupiah|Kuantitas|Nomor meja|Nama pemesan|Provider delivery|marketplace|Promo|Order tersimpan|payment|Reference|EDC|Transfer|Tunai/i.test(msg)) {
       return { ok: false, error: msg };
     }
     console.error("[order-action] checkout failed:", err);
     return { ok: false, error: "Gagal memproses pembayaran. Coba lagi." };
+  }
+}
+
+
+export interface SaveHeldOrderRequest {
+  orderId?: string | null;
+  outletId: string;
+  cart: CartLine[];
+  orderType: OrderType;
+  tableNo?: string | null;
+  customerName?: string | null;
+  deliveryProvider?: DeliveryProvider | null;
+  channelOrderName?: string | null;
+  guestCount?: number | null;
+  orderNote?: string | null;
+  taxPercent: number;
+  promoId?: string | null;
+}
+
+export async function actionSaveHeldOrder(
+  req: SaveHeldOrderRequest,
+): Promise<ActionResult<{ heldOrder: HeldOrderView }>> {
+  try {
+    const session = await requirePermission(PERM);
+    assertOutletAccess(session, req.outletId);
+
+    const shift = await getActiveShift(req.outletId, session.userId);
+    if (!shift) return { ok: false, error: "Tidak ada shift terbuka. Buka shift dulu." };
+
+    const heldOrder = saveHeldOrder({
+      orderId: req.orderId,
+      outletId: req.outletId,
+      shiftId: shift.id,
+      cashierId: session.userId,
+      cart: req.cart,
+      orderType: req.orderType,
+      tableNo: req.tableNo,
+      customerName: req.customerName,
+      deliveryProvider: req.deliveryProvider,
+      channelOrderName: req.channelOrderName,
+      guestCount: req.guestCount,
+      orderNote: req.orderNote,
+      taxPercent: req.taxPercent,
+      promoId: req.promoId,
+    });
+
+    await writeAudit({
+      action: "order.held",
+      actorId: session.userId,
+      outletId: req.outletId,
+      entity: "order",
+      entityId: heldOrder.orderId,
+      detail: { orderNo: heldOrder.orderNo, total: heldOrder.total, promoId: heldOrder.promoId, discountAmount: heldOrder.discountAmount },
+    });
+
+    revalidatePath("/kasir");
+    return { ok: true, heldOrder };
+  } catch (err) {
+    if (err instanceof PermissionError) return { ok: false, error: "Anda tidak punya izin menyimpan order." };
+    if (err instanceof OutletScopeError) return { ok: false, error: "Outlet ini di luar akses Anda." };
+    const msg = err instanceof Error ? err.message : String(err);
+    if (/kosong|shift terbuka|tidak ditemukan|tidak tersedia|rupiah|Kuantitas|Nomor meja|Nama pemesan|Provider delivery|marketplace|Promo|Order tersimpan|payment|Reference|EDC|Transfer|Tunai/i.test(msg)) {
+      return { ok: false, error: msg };
+    }
+    console.error("[order-action] save held failed:", err);
+    return { ok: false, error: "Gagal menyimpan order. Coba lagi." };
   }
 }
