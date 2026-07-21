@@ -253,6 +253,117 @@ export const customers = sqliteTable("customers", {
   ...timestamps,
 });
 
+
+// ===== Customer app / Wanna Rewards (public member identity) =====
+// Deliberately separate from internal POS `users` / better-auth. Customers use
+// email/password and a distinct cookie (see src/lib/customer-session.ts).
+export const customerMembers = sqliteTable(
+  "customer_members",
+  {
+    id: text("id").primaryKey(),
+    fullName: text("full_name").notNull(),
+    phone: text("phone").notNull(),
+    email: text("email").notNull(),
+    /** Customer app credential hash. Separate from internal better-auth account rows. */
+    passwordHash: text("password_hash"),
+    termsAcceptedAt: text("terms_accepted_at").notNull(),
+    privacyAcceptedAt: text("privacy_accepted_at").notNull(),
+    marketingOptIn: integer("marketing_opt_in", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    pointsBalance: integer("points_balance").notNull().default(0),
+    tier: text("tier", { enum: ["silver", "gold"] })
+      .notNull()
+      .default("silver"),
+    ...timestamps,
+  },
+  (t) => [
+    uniqueIndex("customer_members_phone_unq").on(t.phone),
+    uniqueIndex("customer_members_email_unq").on(t.email),
+  ],
+);
+
+export const customerOtpAttempts = sqliteTable(
+  "customer_otp_attempts",
+  {
+    id: text("id").primaryKey(),
+    phone: text("phone").notNull(),
+    purpose: text("purpose", { enum: ["register", "login"] }).notNull(),
+    codeHash: text("code_hash"),
+    expiresAt: text("expires_at").notNull(),
+    verifiedAt: text("verified_at"),
+    ...timestamps,
+  },
+  (t) => [index("customer_otp_phone_idx").on(t.phone)],
+);
+
+export const customerPointEvents = sqliteTable(
+  "customer_point_events",
+  {
+    id: text("id").primaryKey(),
+    memberId: text("member_id")
+      .notNull()
+      .references(() => customerMembers.id, { onDelete: "cascade" }),
+    kind: text("kind", {
+      enum: ["bonus", "earn", "redeem", "adjust"],
+    }).notNull(),
+    points: integer("points").notNull(),
+    sourceOrderId: text("source_order_id").references(() => orders.id),
+    sourceVoucherId: text("source_voucher_id"),
+    note: text("note"),
+    ...timestamps,
+  },
+  (t) => [index("customer_point_events_member_idx").on(t.memberId)],
+);
+
+export const customerRewards = sqliteTable("customer_rewards", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  category: text("category", {
+    enum: ["voucher", "paket", "gratis", "ongkir"],
+  }).notNull(),
+  pointsCost: integer("points_cost").notNull(),
+  description: text("description"),
+  active: integer("active", { mode: "boolean" }).notNull().default(true),
+  ...timestamps,
+});
+
+export const customerVouchers = sqliteTable(
+  "customer_vouchers",
+  {
+    id: text("id").primaryKey(),
+    memberId: text("member_id")
+      .notNull()
+      .references(() => customerMembers.id, { onDelete: "cascade" }),
+    rewardId: text("reward_id").references(() => customerRewards.id),
+    code: text("code").notNull(),
+    status: text("status", {
+      enum: ["active", "used", "expired"],
+    })
+      .notNull()
+      .default("active"),
+    issuedAt: text("issued_at").notNull(),
+    expiresAt: text("expires_at").notNull(),
+    usedOrderId: text("used_order_id").references(() => orders.id),
+    ...timestamps,
+  },
+  (t) => [
+    uniqueIndex("customer_vouchers_code_unq").on(t.code),
+    index("customer_vouchers_member_idx").on(t.memberId),
+  ],
+);
+
+export const customerPromos = sqliteTable("customer_promos", {
+  id: text("id").primaryKey(),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  badge: text("badge"),
+  startsAt: text("starts_at"),
+  endsAt: text("ends_at"),
+  active: integer("active", { mode: "boolean" }).notNull().default(true),
+  ...timestamps,
+});
+
 // ===== Shifts & cash =====
 export const shifts = sqliteTable(
   "shifts",
@@ -321,6 +432,9 @@ export const orders = sqliteTable(
       .notNull()
       .references(() => users.id),
     customerId: text("customer_id").references(() => customers.id),
+    customerMemberId: text("customer_member_id").references(() => customerMembers.id),
+    /** Phone snapshot for customer-app member link at checkout time. */
+    customerPhone: text("customer_phone"),
     orderType: text("order_type", {
       enum: ["dinein", "takeaway", "delivery"],
     }).notNull(),
@@ -351,6 +465,7 @@ export const orders = sqliteTable(
   (t) => [
     index("orders_outlet_idx").on(t.outletId),
     index("orders_shift_idx").on(t.shiftId),
+    index("orders_customer_member_idx").on(t.customerMemberId),
   ],
 );
 

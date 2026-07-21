@@ -22,6 +22,10 @@ import {
   payments,
   orderItems,
   kitchenTickets,
+  customerMembers,
+  customerPointEvents,
+  customerRewards,
+  customerVouchers,
   inventoryItems,
   outletStock,
   recipes,
@@ -272,6 +276,106 @@ describe("checkout — idempotency (BR-003)", () => {
     checkout(db, baseInput({ idempotencyKey: "b" }));
     expect(db.select().from(orders).all()).toHaveLength(2);
     expect(db.select().from(payments).all()).toHaveLength(2);
+  });
+});
+
+describe("checkout — customer member link, points, and vouchers", () => {
+  function seedMemberRewards() {
+    db.insert(customerMembers)
+      .values({
+        id: "member_1",
+        fullName: "Budi Santoso",
+        phone: "6281234567890",
+        email: "budi@example.com",
+        termsAcceptedAt: "2026-07-01T00:00:00.000Z",
+        privacyAcceptedAt: "2026-07-01T00:00:00.000Z",
+        pointsBalance: 0,
+        tier: "silver",
+      })
+      .run();
+    db.insert(customerRewards)
+      .values({
+        id: "reward_voucher_20k",
+        name: "Voucher Rp20.000",
+        category: "voucher",
+        pointsCost: 900,
+        description: "Potongan belanja",
+      })
+      .run();
+    db.insert(customerVouchers)
+      .values({
+        id: "voucher_1",
+        memberId: "member_1",
+        rewardId: "reward_voucher_20k",
+        code: "WD20K",
+        status: "active",
+        issuedAt: "2026-07-20T00:00:00.000Z",
+        expiresAt: "2099-07-20T00:00:00.000Z",
+      })
+      .run();
+  }
+
+  it("links a paid order to a valid customer member and earns points once", () => {
+    seedMemberRewards();
+
+    const receipt = checkout(db, baseInput({ customerMemberPhone: "0812 3456 7890", idempotencyKey: "member-earn" }));
+
+    const order = db.select().from(orders).where(eq(orders.id, receipt.orderId)).get();
+    expect(order).toMatchObject({
+      customerMemberId: "member_1",
+      customerPhone: "6281234567890",
+    });
+    expect(receipt.customerMemberId).toBe("member_1");
+    expect(receipt.customerPhone).toBe("6281234567890");
+    expect(receipt.pointsEarned).toBe(39);
+    expect(db.select().from(customerMembers).where(eq(customerMembers.id, "member_1")).get()?.pointsBalance).toBe(39);
+    expect(db.select().from(customerPointEvents).where(eq(customerPointEvents.memberId, "member_1")).all()).toMatchObject([
+      {
+        kind: "earn",
+        points: 39,
+        sourceOrderId: receipt.orderId,
+      },
+    ]);
+  });
+
+  it("replays member checkout without double-earning points", () => {
+    seedMemberRewards();
+    const input = baseInput({ customerMemberPhone: "6281234567890", idempotencyKey: "member-replay" });
+
+    const first = checkout(db, input);
+    const second = checkout(db, input);
+
+    expect(second.orderId).toBe(first.orderId);
+    expect(second.replayed).toBe(true);
+    expect(second.pointsEarned).toBe(39);
+    expect(db.select().from(customerPointEvents).where(eq(customerPointEvents.memberId, "member_1")).all()).toHaveLength(1);
+    expect(db.select().from(customerMembers).where(eq(customerMembers.id, "member_1")).get()?.pointsBalance).toBe(39);
+  });
+
+  it("redeems an active voucher once with a server-side discount", () => {
+    seedMemberRewards();
+
+    const receipt = checkout(db, baseInput({
+      customerMemberPhone: "6281234567890",
+      voucherCode: " wd20k ",
+      idempotencyKey: "voucher-use",
+      payment: { method: "cash", cashReceived: 50000 },
+    }));
+
+    expect(receipt.discountAmount).toBe(20000);
+    expect(receipt.total).toBe(17760);
+    expect(receipt.voucherCode).toBe("WD20K");
+    expect(db.select().from(customerVouchers).where(eq(customerVouchers.id, "voucher_1")).get()).toMatchObject({
+      status: "used",
+      usedOrderId: receipt.orderId,
+    });
+    expect(() =>
+      checkout(db, baseInput({
+        customerMemberPhone: "6281234567890",
+        voucherCode: "WD20K",
+        idempotencyKey: "voucher-second-use",
+      })),
+    ).toThrow(/Voucher sudah digunakan/i);
   });
 });
 

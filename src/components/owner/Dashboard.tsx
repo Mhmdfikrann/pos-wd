@@ -63,7 +63,7 @@ export function Dashboard({ report, userName, dateRange, onDateRange }: Dashboar
         <StatCard iconName="wallet" iconBg="#FFF1F2" iconColor="#A91F34" label="Omzet Bersih" value={formatRupiah(report.summary.netSales)} delta={`Refund ${formatRupiah(report.summary.refundAmount)}`} deltaColor="#2E9D64" />
         <StatCard iconName="receiptSm" iconBg="#FFF7E9" iconColor="#C67A15" label="Transaksi" value={String(report.summary.orderCount)} delta={`Void ${formatRupiah(report.summary.voidAmount)}`} deltaColor="#C67A15" />
         <StatCard iconName="cube" iconBg="#EDF7F1" iconColor="#238152" label="Produk Terjual" value={String(report.summary.productsSold)} delta={`Diskon ${formatRupiah(report.summary.discountAmount)}`} deltaColor="#2E9D64" />
-        <StatCard iconName="customer" iconBg="#EEF2FB" iconColor="#3A5BB0" label="Pengeluaran" value={formatRupiah(report.summary.expenseAmount)} delta="Kas operasional" deltaColor="#3A5BB0" />
+        <StatCard iconName="customer" iconBg="#EEF2FB" iconColor="#3A5BB0" label="Member Aktif" value={String(report.customer.activeMembers30d)} delta={`${report.customer.memberCount} total member`} deltaColor="#3A5BB0" />
       </div>
 
       {/* Chart + payment */}
@@ -125,6 +125,35 @@ export function Dashboard({ report, userName, dateRange, onDateRange }: Dashboar
                 </div>
               ))}
             </div>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="wd-owner-split-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1.4fr", gap: "14px", marginTop: "14px" }}>
+        <div style={{ ...CARD, padding: "20px 22px" }}>
+          <div style={{ fontSize: "14.5px", fontWeight: 800, marginBottom: "16px" }}>Wanna Rewards</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+            <CustomerMetric label="Repeat member" value={String(report.customer.repeatMembers)} sub="2+ transaksi" />
+            <CustomerMetric label="Poin member" value={report.customer.pointsIssued.toLocaleString("id-ID")} sub={`Redeem ${report.customer.pointsRedeemed.toLocaleString("id-ID")}`} />
+          </div>
+        </div>
+        <div style={{ ...CARD, overflow: "hidden" }}>
+          <div style={{ padding: "16px 20px 12px", fontSize: "14.5px", fontWeight: 800 }}>Top Member</div>
+          {(report.customer.topMembers.length ? report.customer.topMembers : []).slice(0, 4).map((member, i) => (
+            <div key={member.memberId} style={{ display: "grid", gridTemplateColumns: "32px 1.4fr 0.8fr 1fr", gap: "10px", alignItems: "center", padding: "11px 20px", borderTop: "1px solid rgba(35,32,31,0.05)", fontSize: "13px" }}>
+              <div style={{ width: 30, height: 30, borderRadius: 9, background: badgeTints[i % badgeTints.length][0], color: badgeTints[i % badgeTints.length][1], display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800 }}>
+                {member.fullName.charAt(0)}
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontWeight: 800, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{member.fullName}</div>
+                <div className="font-mono" style={{ fontSize: "11px", color: "rgba(35,32,31,0.45)", marginTop: 1 }}>{member.phone}</div>
+              </div>
+              <div className="font-mono" style={{ textAlign: "right", fontWeight: 700 }}>{member.orders}x</div>
+              <div className="font-mono" style={{ textAlign: "right", fontWeight: 700, color: "#A91F34" }}>{formatRupiah(member.spend)}</div>
+            </div>
+          ))}
+          {report.customer.topMembers.length === 0 ? (
+            <div style={{ padding: "18px 20px", color: "rgba(35,32,31,0.55)", fontSize: "13px", fontWeight: 700 }}>Belum ada transaksi member pada periode ini.</div>
           ) : null}
         </div>
       </div>
@@ -230,6 +259,16 @@ export function Dashboard({ report, userName, dateRange, onDateRange }: Dashboar
           ))}
         </div>
       </div>
+    </div>
+  );
+}
+
+function CustomerMetric({ label, value, sub }: { label: string; value: string; sub: string }) {
+  return (
+    <div style={{ borderRadius: "12px", background: "#F8F5F0", padding: "14px 15px" }}>
+      <div style={{ fontSize: "11.5px", fontWeight: 800, color: "rgba(35,32,31,0.48)" }}>{label}</div>
+      <div className="font-mono" style={{ marginTop: 7, fontSize: "22px", fontWeight: 800, color: "#A91F34" }}>{value}</div>
+      <div style={{ marginTop: 3, fontSize: "11.5px", fontWeight: 700, color: "rgba(35,32,31,0.5)" }}>{sub}</div>
     </div>
   );
 }

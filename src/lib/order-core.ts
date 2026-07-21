@@ -26,7 +26,7 @@
  * together.
  */
 import { randomUUID } from "node:crypto";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import {
   orders,
@@ -36,9 +36,14 @@ import {
   products,
   shifts,
   discounts,
+  customerMembers,
+  customerPointEvents,
+  customerRewards,
+  customerVouchers,
 } from "@/db/schema";
 import { deductStockForOrderInTransaction } from "@/lib/inventory-data";
 import { computeTotals, type OrderLine } from "@/lib/order-math";
+import { normalizeCustomerPhone } from "@/lib/customer-auth-core";
 
 /**
  * The db surface checkout needs. Generic over the schema so both the real
@@ -85,6 +90,9 @@ export interface CheckoutInput {
   taxPercent: number;
   promoId?: string | null;
   discountAmount?: number;
+  customerMemberId?: string | null;
+  customerMemberPhone?: string | null;
+  voucherCode?: string | null;
   /** Legacy single-payment shape; normalized to `payments`. */
   payment?: {
     method: PaymentMethod;
@@ -126,6 +134,8 @@ export interface Receipt {
   customerName: string | null;
   deliveryProvider: DeliveryProvider | null;
   channelOrderName: string | null;
+  customerMemberId: string | null;
+  customerPhone: string | null;
   lines: ReceiptLine[];
   subtotal: number;
   discountAmount: number;
@@ -133,6 +143,8 @@ export interface Receipt {
   total: number;
   promoId: string | null;
   promoName: string | null;
+  pointsEarned: number;
+  voucherCode: string | null;
   payment: ReceiptPaymentLine;
   payments: ReceiptPaymentLine[];
   /** true when this receipt was replayed from a prior identical request. */
@@ -185,6 +197,7 @@ export interface HeldOrderView {
 }
 
 const DELIVERY_PROVIDERS = new Set<DeliveryProvider>(["gofood", "grabfood", "shopeefood"]);
+const POINTS_PER_RUPIAH = 1000;
 
 function cleanText(value: string | null | undefined, max: number): string | null {
   const text = value?.trim();
@@ -241,6 +254,91 @@ function resolvePromo(db: CheckoutDb, promoId: string | null | undefined, subtot
   const raw = promo.type === "percent" ? Math.round((subtotal * promo.value) / 100) : promo.value;
   const discountAmount = Math.max(0, Math.min(raw, subtotal));
   return { id: promo.id, name: promo.name, type: promo.type, value: promo.value, discountAmount };
+}
+
+interface ResolvedCustomerLink {
+  id: string;
+  phone: string;
+  fullName: string;
+}
+
+interface ResolvedVoucherUse {
+  id: string;
+  code: string;
+  memberId: string;
+  rewardName: string;
+  discountAmount: number;
+}
+
+function findCustomerMember(db: CheckoutDb, input: { memberId?: string | null; phone?: string | null }): ResolvedCustomerLink | null {
+  const memberId = cleanOptional(input.memberId, 80);
+  const phone = input.phone ? normalizeCustomerPhone(input.phone) : "";
+
+  if (memberId) {
+    const row = db.select().from(customerMembers).where(eq(customerMembers.id, memberId)).get();
+    if (!row) throw new Error("Member customer tidak ditemukan.");
+    if (phone && row.phone !== phone) throw new Error("Nomor HP member tidak cocok.");
+    return { id: row.id, phone: row.phone, fullName: row.fullName };
+  }
+
+  if (!phone) return null;
+  if (!/^62\d{8,13}$/.test(phone)) throw new Error("Nomor HP member tidak valid.");
+  const row = db.select().from(customerMembers).where(eq(customerMembers.phone, phone)).get();
+  if (!row) throw new Error("Member customer tidak ditemukan.");
+  return { id: row.id, phone: row.phone, fullName: row.fullName };
+}
+
+function normalizeVoucherCode(code: string | null | undefined): string | null {
+  const value = code?.trim().toUpperCase();
+  return value || null;
+}
+
+function voucherDiscountFromRewardName(name: string): number {
+  const match = name.match(/Rp\s*([0-9][0-9.]*)/i);
+  if (!match) throw new Error("Voucher tidak memiliki nominal diskon.");
+  return Number.parseInt(match[1].replace(/\./g, ""), 10);
+}
+
+function resolveCustomerVoucher(
+  db: CheckoutDb,
+  input: { voucherCode?: string | null; member: ResolvedCustomerLink | null; subtotal: number; now: Date },
+): { member: ResolvedCustomerLink | null; voucher: ResolvedVoucherUse | null } {
+  const code = normalizeVoucherCode(input.voucherCode);
+  if (!code) return { member: input.member, voucher: null };
+
+  const row = db
+    .select({
+      id: customerVouchers.id,
+      memberId: customerVouchers.memberId,
+      status: customerVouchers.status,
+      expiresAt: customerVouchers.expiresAt,
+      code: customerVouchers.code,
+      fullName: customerMembers.fullName,
+      phone: customerMembers.phone,
+      rewardName: customerRewards.name,
+      rewardCategory: customerRewards.category,
+    })
+    .from(customerVouchers)
+    .innerJoin(customerMembers, eq(customerVouchers.memberId, customerMembers.id))
+    .leftJoin(customerRewards, eq(customerVouchers.rewardId, customerRewards.id))
+    .where(eq(customerVouchers.code, code))
+    .get();
+
+  if (!row) throw new Error("Voucher tidak ditemukan.");
+  if (row.status !== "active") throw new Error("Voucher sudah digunakan atau tidak aktif.");
+  if (Date.parse(row.expiresAt) <= input.now.getTime()) throw new Error("Voucher sudah kedaluwarsa.");
+  if (input.member && input.member.id !== row.memberId) throw new Error("Voucher bukan milik member ini.");
+  if (row.rewardCategory !== "voucher" || !row.rewardName) throw new Error("Voucher tidak valid untuk diskon kasir.");
+
+  const discountAmount = Math.min(input.subtotal, voucherDiscountFromRewardName(row.rewardName));
+  return {
+    member: input.member ?? { id: row.memberId, phone: row.phone, fullName: row.fullName },
+    voucher: { id: row.id, code: row.code, memberId: row.memberId, rewardName: row.rewardName, discountAmount },
+  };
+}
+
+function pointsForPaidOrder(total: number): number {
+  return Math.max(0, Math.floor(total / POINTS_PER_RUPIAH));
 }
 
 const NON_CASH_REQUIRES_REF = new Set<PaymentMethod>(["qris", "transfer", "ewallet", "card"]);
@@ -390,10 +488,24 @@ export function checkout(db: CheckoutDb, input: CheckoutInput): Receipt {
     const lines = buildLines(tx as CheckoutDb, input.cart);
     const subtotalOnly = computeTotals(lines, input.taxPercent, 0).subtotal;
     const promo = resolvePromo(tx as CheckoutDb, input.promoId, subtotalOnly);
-    const discountAmount = promo?.discountAmount ?? input.discountAmount ?? 0;
+    const memberByInput = findCustomerMember(tx as CheckoutDb, {
+      memberId: input.customerMemberId,
+      phone: input.customerMemberPhone,
+    });
+    const now = new Date();
+    const { member, voucher } = resolveCustomerVoucher(tx as CheckoutDb, {
+      voucherCode: input.voucherCode,
+      member: memberByInput,
+      subtotal: subtotalOnly,
+      now,
+    });
+    const baseDiscountAmount = promo?.discountAmount ?? input.discountAmount ?? 0;
+    const discountAmount = Math.min(subtotalOnly, baseDiscountAmount + (voucher?.discountAmount ?? 0));
     const totals = computeTotals(lines, input.taxPercent, discountAmount);
+    const pointsEarned = member ? pointsForPaidOrder(totals.total) : 0;
 
     const paymentLines = normalizePaymentLines(input, totals.total);
+    const updatedAt = now.toISOString();
 
     const heldOrderId = input.heldOrderId?.trim() || null;
     if (heldOrderId) {
@@ -407,6 +519,8 @@ export function checkout(db: CheckoutDb, input: CheckoutInput): Receipt {
           orderType: input.orderType,
           tableNo: context.tableNo,
           customerName: context.customerName,
+          customerMemberId: member?.id ?? null,
+          customerPhone: member?.phone ?? null,
           deliveryProvider: context.deliveryProvider,
           channelOrderName: context.channelOrderName,
           guestCount: input.guestCount ?? null,
@@ -418,7 +532,7 @@ export function checkout(db: CheckoutDb, input: CheckoutInput): Receipt {
           promoNameSnapshot: promo?.name ?? null,
           total: totals.total,
           note: context.orderNote,
-          updatedAt: new Date().toISOString(),
+          updatedAt,
         })
         .where(eq(orders.id, heldOrderId))
         .run();
@@ -435,6 +549,8 @@ export function checkout(db: CheckoutDb, input: CheckoutInput): Receipt {
         orderType: input.orderType,
         tableNo: context.tableNo,
         customerName: context.customerName,
+        customerMemberId: member?.id ?? null,
+        customerPhone: member?.phone ?? null,
         deliveryProvider: context.deliveryProvider,
         channelOrderName: context.channelOrderName,
         guestCount: input.guestCount ?? null,
@@ -485,6 +601,43 @@ export function checkout(db: CheckoutDb, input: CheckoutInput): Receipt {
     // Recipe-based stock deduction (Phase 7). Products without recipes are
     // skipped; products with recipes must have enough outlet stock.
     deductStockForOrderInTransaction(tx as CheckoutDb, { orderId, actorId: input.cashierId });
+
+    if (voucher) {
+      const result = tx
+        .update(customerVouchers)
+        .set({ status: "used", usedOrderId: orderId, updatedAt })
+        .where(and(eq(customerVouchers.id, voucher.id), eq(customerVouchers.status, "active")))
+        .run();
+      if (result.changes !== 1) throw new Error("Voucher sudah digunakan atau tidak aktif.");
+
+      tx.insert(customerPointEvents).values({
+        id: randomUUID(),
+        memberId: voucher.memberId,
+        kind: "adjust",
+        points: 0,
+        sourceOrderId: orderId,
+        sourceVoucherId: voucher.id,
+        note: `Pakai ${voucher.rewardName} (${voucher.code})`,
+      }).run();
+    }
+
+    if (member && pointsEarned > 0) {
+      tx.update(customerMembers)
+        .set({
+          pointsBalance: sql`${customerMembers.pointsBalance} + ${pointsEarned}`,
+          updatedAt,
+        })
+        .where(eq(customerMembers.id, member.id))
+        .run();
+      tx.insert(customerPointEvents).values({
+        id: randomUUID(),
+        memberId: member.id,
+        kind: "earn",
+        points: pointsEarned,
+        sourceOrderId: orderId,
+        note: `Belanja ${orderNo}`,
+      }).run();
+    }
   });
 
   return buildReceipt(db, orderId);
@@ -621,6 +774,16 @@ export function buildReceipt(db: CheckoutDb, orderId: string): Receipt {
 
   const items = db.select().from(orderItems).where(eq(orderItems.orderId, orderId)).all();
   const payRows = db.select().from(payments).where(eq(payments.orderId, orderId)).all();
+  const pointRows = db
+    .select({ points: customerPointEvents.points })
+    .from(customerPointEvents)
+    .where(and(eq(customerPointEvents.sourceOrderId, orderId), eq(customerPointEvents.kind, "earn")))
+    .all();
+  const voucherRow = db
+    .select({ code: customerVouchers.code })
+    .from(customerVouchers)
+    .where(eq(customerVouchers.usedOrderId, orderId))
+    .get();
   const receiptPayments: ReceiptPaymentLine[] = payRows.map((pay) => ({
     method: pay.method,
     provider: pay.provider,
@@ -640,6 +803,8 @@ export function buildReceipt(db: CheckoutDb, orderId: string): Receipt {
     orderType: order.orderType,
     tableNo: order.tableNo,
     customerName: order.customerName,
+    customerMemberId: order.customerMemberId,
+    customerPhone: order.customerPhone,
     deliveryProvider: order.deliveryProvider,
     channelOrderName: order.channelOrderName,
     lines: items.map((it) => ({
@@ -656,6 +821,8 @@ export function buildReceipt(db: CheckoutDb, orderId: string): Receipt {
     total: order.total,
     promoId: order.promoId,
     promoName: order.promoNameSnapshot,
+    pointsEarned: pointRows.reduce((total, row) => total + row.points, 0),
+    voucherCode: voucherRow?.code ?? null,
     payment: receiptPayments[0] ?? fallbackPayment,
     payments: receiptPayments.length ? receiptPayments : [fallbackPayment],
     replayed: false,

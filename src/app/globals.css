@@ -482,3 +482,407 @@ button:focus-visible .wd-collapsed-logo-toggle .wd-collapsed-logo-icon {
     min-width: 920px;
   }
 }
+
+/* ===== Landing + Customer App phase LCA-01 helpers ===== */
+@keyframes wd-lca-float {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50% { transform: translateY(-14px) rotate(1deg); }
+}
+@keyframes wd-lca-float2 {
+  0%, 100% { transform: translateY(0) rotate(3deg); }
+  50% { transform: translateY(-18px) rotate(-2deg); }
+}
+@keyframes wd-lca-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.wd-lca-nav a {
+  color: rgba(45, 32, 34, 0.7);
+  font-weight: 600;
+  font-size: 14.5px;
+  transition: color 0.15s;
+}
+.wd-lca-nav a:hover { color: #a91f34; }
+.wd-lca-menucard {
+  transition: transform 0.22s, box-shadow 0.22s;
+}
+.wd-lca-menucard:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 26px 50px -30px rgba(127, 22, 40, 0.55) !important;
+}
+.wd-lca-gal .wd-lca-image-slot,
+.wd-lca-image-slot {
+  transition: transform 0.25s ease;
+}
+.wd-lca-gal:hover .wd-lca-image-slot { transform: scale(1.06); }
+.wd-lca-float { animation: wd-lca-float 6s ease-in-out infinite; }
+.wd-lca-float2 { animation: wd-lca-float2 7s ease-in-out infinite; }
+.wd-lca-marquee { animation: wd-lca-marquee 24s linear infinite; }
+
+@media (max-width: 980px) {
+  .wd-lca-nav { display: none !important; }
+  .wd-lca-hero,
+  .wd-lca-about,
+  .wd-lca-outlet-grid,
+  .wd-lca-member-card {
+    grid-template-columns: 1fr !important;
+  }
+  .wd-lca-menu-grid,
+  .wd-lca-testi-grid,
+  .wd-lca-footer-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+  .wd-lca-promo-grid,
+  .wd-lca-gallery-grid {
+    grid-template-columns: 1fr !important;
+    grid-template-rows: auto !important;
+  }
+  .wd-lca-gal { grid-row: auto !important; min-height: 220px; }
+}
+
+@media (max-width: 640px) {
+  .wd-lca-nav-inner { padding: 0 18px !important; gap: 12px !important; }
+  .wd-lca-nav-inner > a:last-child { display: none !important; }
+  .wd-lca-hero h1 { font-size: 46px !important; }
+  .wd-lca-section h2,
+  .wd-lca-about h2,
+  .wd-lca-outlet h2 { font-size: 34px !important; }
+  .wd-lca-menu-grid,
+  .wd-lca-testi-grid,
+  .wd-lca-footer-grid,
+  .wd-lca-values-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .wd-lca-member-card { padding: 34px 24px !important; }
+}
+
+/* ===== Landing mobile parity (LCA-02) ===== */
+.wd-lca-menu-button,
+.wd-lca-sticky-order,
+.wd-lca-mobile-drawer {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  body:has(.wd-lca-sticky-order) {
+    background: #fff9f2;
+  }
+  .wd-lca-menu-button,
+  .wd-lca-sticky-order {
+    display: flex !important;
+  }
+  .wd-lca-staff-link {
+    display: none !important;
+  }
+  .wd-lca-mobile-drawer {
+    display: block !important;
+  }
+  .wd-lca-nav-inner {
+    height: 62px !important;
+    padding: 0 18px !important;
+  }
+  .wd-lca-hero {
+    padding: 22px 20px 6px !important;
+    gap: 20px !important;
+  }
+  .wd-lca-hero > div:first-child > .font-mono:first-child {
+    font-size: 10px !important;
+    letter-spacing: 0.12em !important;
+    padding: 6px 12px !important;
+  }
+  .wd-lca-hero h1 {
+    font-size: 40px !important;
+    line-height: 0.98 !important;
+    margin-top: 16px !important;
+  }
+  .wd-lca-hero p {
+    font-size: 15px !important;
+    line-height: 1.55 !important;
+    margin-top: 14px !important;
+  }
+  .wd-lca-hero > div:first-child > div:nth-of-type(2) {
+    margin-top: 18px !important;
+  }
+  .wd-lca-hero > div:first-child > div:nth-of-type(3) {
+    justify-content: space-around !important;
+    text-align: center !important;
+    gap: 18px !important;
+    margin-top: 24px !important;
+  }
+  .wd-lca-hero > div:nth-child(2) {
+    height: 260px !important;
+    grid-row: 2 !important;
+  }
+  .wd-lca-hero > div:nth-child(2) > div:nth-child(2) {
+    top: 20px !important;
+    left: 20px !important;
+    right: 20px !important;
+    bottom: 20px !important;
+    border-radius: 18px !important;
+  }
+  .wd-lca-hero > div:nth-child(2) > div:nth-child(3) {
+    width: 96px !important;
+    height: 96px !important;
+    border-radius: 16px !important;
+    bottom: -10px !important;
+    left: -6px !important;
+  }
+  .wd-lca-hero > div:nth-child(2) > div:nth-child(4) {
+    display: none !important;
+  }
+  .wd-lca-hero > div:nth-child(2) > div:nth-child(5) {
+    top: 8px !important;
+    right: -8px !important;
+    bottom: auto !important;
+    padding: 9px 12px !important;
+  }
+  .wd-lca-section,
+  .wd-lca-about,
+  .wd-lca-outlet,
+  #member {
+    padding-left: 20px !important;
+    padding-right: 20px !important;
+    scroll-margin-top: 76px !important;
+  }
+  .wd-lca-section {
+    padding-top: 34px !important;
+  }
+  .wd-lca-section h2,
+  .wd-lca-about h2,
+  .wd-lca-outlet h2,
+  #member h2 {
+    font-size: 28px !important;
+    line-height: 1.08 !important;
+  }
+  .wd-lca-menu-grid,
+  .wd-lca-testi-grid,
+  .wd-lca-gallery-grid {
+    display: flex !important;
+    grid-template-columns: none !important;
+    gap: 12px !important;
+    overflow-x: auto !important;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    padding: 2px 20px 12px !important;
+    margin-left: -20px !important;
+    margin-right: -20px !important;
+    scrollbar-width: none;
+  }
+  .wd-lca-menu-grid::-webkit-scrollbar,
+  .wd-lca-testi-grid::-webkit-scrollbar,
+  .wd-lca-gallery-grid::-webkit-scrollbar {
+    display: none;
+  }
+  .wd-lca-menu-grid > article {
+    flex: 0 0 168px !important;
+    width: 168px !important;
+    min-height: auto !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    border-radius: 16px !important;
+    scroll-snap-align: start;
+  }
+  .wd-lca-menu-grid > article > div:first-child {
+    height: 120px !important;
+    border-radius: 0 !important;
+  }
+  .wd-lca-menu-grid > article > h3,
+  .wd-lca-menu-grid > article > p,
+  .wd-lca-menu-grid > article > div:last-child {
+    margin-left: 13px !important;
+    margin-right: 13px !important;
+  }
+  .wd-lca-menu-grid > article > h3 {
+    font-size: 15px !important;
+    margin-top: 13px !important;
+  }
+  .wd-lca-menu-grid > article > p {
+    font-size: 11.5px !important;
+    line-height: 1.35 !important;
+    min-height: 31px !important;
+  }
+  .wd-lca-menu-grid > article > div:last-child {
+    padding-top: 10px !important;
+    padding-bottom: 14px !important;
+  }
+  .wd-lca-menu-grid > article > div:last-child .font-mono {
+    font-size: 15px !important;
+  }
+  .wd-lca-menu-grid > article > div:last-child span:last-child {
+    width: 30px !important;
+    height: 30px !important;
+    border-radius: 9px !important;
+    background: #ffd84d !important;
+    color: #2d2022 !important;
+  }
+  .wd-lca-promo-grid {
+    gap: 12px !important;
+  }
+  .wd-lca-promo-grid > article:first-child {
+    min-height: 230px !important;
+    padding: 24px !important;
+  }
+  .wd-lca-promo-grid > article:not(:first-child) {
+    min-height: 170px !important;
+    padding: 16px !important;
+  }
+  .wd-lca-promo-grid > article:not(:first-child) > div:nth-child(2) {
+    display: none !important;
+  }
+  .wd-lca-about {
+    padding-top: 42px !important;
+    gap: 18px !important;
+  }
+  .wd-lca-about > div:first-child {
+    height: 280px !important;
+  }
+  .wd-lca-values-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+  }
+  .wd-lca-values-grid > div {
+    padding: 14px !important;
+  }
+  .wd-lca-gallery-grid > .wd-lca-gal {
+    flex: 0 0 auto !important;
+    width: 200px !important;
+    height: 210px !important;
+    min-height: 210px !important;
+    scroll-snap-align: start;
+  }
+  .wd-lca-gallery-grid > .wd-lca-gal:nth-child(even) {
+    width: 150px !important;
+  }
+  .wd-lca-testi-grid > article {
+    flex: 0 0 286px !important;
+    width: 286px !important;
+    scroll-snap-align: start;
+    padding: 20px !important;
+  }
+  .wd-lca-outlet-grid {
+    gap: 22px !important;
+  }
+  .wd-lca-outlet-grid > div:last-child {
+    height: 300px !important;
+  }
+  .wd-lca-member-card {
+    border-radius: 22px !important;
+  }
+  .wd-lca-member-card > div:last-child > div {
+    width: 280px !important;
+  }
+  footer {
+    padding-bottom: 74px;
+  }
+}
+
+/* ===== Customer App shell (LCA-04) ===== */
+.wd-member-hscroll {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 2px 20px 6px;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.wd-member-hscroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* ===== Responsive shells for loyalty app ===== */
+.wd-member-desktop-shell {
+  display: block;
+}
+.wd-member-mobile-shell {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .wd-member-desktop-shell {
+    display: none !important;
+  }
+  .wd-member-mobile-shell {
+    display: block !important;
+  }
+  .wd-member-phone {
+    width: 100vw !important;
+    height: 100vh !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    background: transparent !important;
+  }
+  .wd-member-notch {
+    display: none !important;
+  }
+  .wd-member-content {
+    border-radius: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    padding-top: env(safe-area-inset-top) !important;
+  }
+  .wd-member-statusbar {
+    display: none !important;
+  }
+}
+
+/* Modal and toast overrides for loyalty app */
+.wd-redeem-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(45, 32, 34, 0.5);
+  backdrop-filter: blur(3px);
+}
+
+.wd-redeem-form {
+  position: relative;
+  width: 100%;
+  background: #FFF9F2;
+  border-radius: 24px 24px 0 0;
+  padding: 22px 20px calc(20px + env(safe-area-inset-bottom));
+  box-shadow: 0 -28px 50px -30px rgba(0, 0, 0, 0.7);
+}
+
+@media (min-width: 768px) {
+  .wd-redeem-overlay {
+    align-items: center;
+  }
+  .wd-redeem-form {
+    width: 100%;
+    max-width: 460px;
+    border-radius: 24px;
+    padding: 24px;
+    box-shadow: 0 20px 60px -20px rgba(0, 0, 0, 0.3);
+  }
+}
+
+.wd-toast-container {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #2D2022;
+  color: #fff;
+  padding: 13px 18px;
+  border-radius: 14px;
+  box-shadow: 0 20px 40px -16px rgba(0,0,0,0.6);
+  font-size: 13px;
+  font-weight: 700;
+  max-width: 320px;
+}
+
+@media (max-width: 768px) {
+  .wd-toast-container {
+    bottom: 96px;
+  }
+}

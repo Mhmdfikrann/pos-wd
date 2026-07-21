@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { background: #EDE4D8; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #2D2022; -webkit-font-smoothing: antialiased; letter-spacing: -0.006em; }
+  a { color: #A91F34; text-decoration: none; }
+  h1, h2, h3, p { margin: 0; }
+  ::selection { background: #FFD84D; color: #2D2022; }
+  @keyframes wd-float { 0%,100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-10px) rotate(1deg); } }
+  @keyframes wd-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+  .wd-scr::-webkit-scrollbar { display: none; }
+  .wd-scr { scrollbar-width: none; -ms-overflow-style: none; }
+  .wd-hscroll::-webkit-scrollbar { display: none; }
+  .wd-hscroll { scrollbar-width: none; }
+</style>
+<script src="./image-slot.js"></script>
+</helmet>
+
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:26px 12px;background:radial-gradient(circle at 50% 0%, #F6ECDD, #E4D8C7);">
+
+  <!-- ===== PHONE ===== -->
+  <div style="position:relative;width:390px;height:844px;background:#111;border-radius:52px;padding:11px;box-shadow:0 50px 100px -30px rgba(90,40,20,0.55), 0 0 0 2px rgba(0,0,0,0.35);">
+    <div style="position:absolute;top:0;left:50%;transform:translateX(-50%);width:126px;height:31px;background:#111;border-radius:0 0 18px 18px;z-index:60;"></div>
+
+    <div class="wd-scr" style="position:relative;width:100%;height:100%;background:#FFF9F2;border-radius:42px;overflow-y:auto;overflow-x:hidden;">
+
+      <!-- status bar -->
+      <div style="position:sticky;top:0;z-index:55;height:46px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 26px 6px;background:rgba(255,249,242,0.9);backdrop-filter:blur(10px);font-size:13px;font-weight:700;">
+        <span style="font-family:'JetBrains Mono',monospace;">09:41</span>
+        <span style="letter-spacing:1px;">📶 5G 🔋</span>
+      </div>
+
+      <!-- top bar -->
+      <div style="position:sticky;top:46px;z-index:50;display:flex;align-items:center;gap:11px;padding:8px 18px 12px;background:rgba(255,249,242,0.92);backdrop-filter:blur(10px);border-bottom:1px solid rgba(45,32,34,0.06);">
+        <div style="width:38px;height:38px;border-radius:10px;background:#fff;border:1px solid rgba(45,32,34,0.08);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;">
+          <img src="assets/logo-icon.jpg" alt="Wanna Dimsum" style="width:34px;height:34px;object-fit:contain;" />
+        </div>
+        <div style="line-height:1.02;flex:1;">
+          <div style="font-size:14.5px;font-weight:800;"><span style="color:#A91F34;">WANNA</span> DIMSUM</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:8px;letter-spacing:0.14em;color:rgba(45,32,34,0.45);text-transform:uppercase;margin-top:2px;">Snap Into The New Taste</div>
+        </div>
+        <button onclick="{{ toggleMenu }}" aria-label="Menu" style="width:42px;height:42px;border-radius:12px;border:none;background:#fff;box-shadow:0 4px 12px -6px rgba(45,32,34,0.3);display:flex;align-items:center;justify-content:center;cursor:pointer;">{{ burgerIcon }}</button>
+      </div>
+
+      {{ drawerEl }}
+
+      <!-- ===== HERO ===== -->
+      <div style="padding:22px 20px 6px;">
+        <div style="display:inline-flex;align-items:center;gap:7px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:#A9791F;background:#FFF4D6;padding:6px 12px;border-radius:999px;font-weight:600;">🥟 Fresh Setiap Hari</div>
+        <h1 style="font-size:40px;line-height:0.98;font-weight:800;letter-spacing:-0.03em;margin-top:16px;">Dimsum hangat,<br><span style="color:#A91F34;">rasa juara.</span></h1>
+        <p style="font-size:15px;line-height:1.55;color:rgba(45,32,34,0.62);margin-top:14px;">Dikukus dadakan dari bahan pilihan. Pesan online atau mampir ke outlet terdekat.</p>
+
+        <div style="position:relative;height:260px;margin-top:20px;">
+          <div style="position:absolute;inset:0;border-radius:24px;background:radial-gradient(circle at 60% 35%, #FFE7A6, #FFD84D 48%, #F5B841);box-shadow:0 26px 50px -26px rgba(233,154,34,0.75);"></div>
+          <div style="position:absolute;top:20px;left:20px;right:20px;bottom:20px;border-radius:18px;overflow:hidden;box-shadow:0 20px 40px -20px rgba(127,22,40,0.5);">
+            <image-slot id="m-hero" shape="rect" fit="cover" placeholder="Foto hero dimsum"></image-slot>
+          </div>
+          <div style="position:absolute;bottom:-10px;left:-6px;width:96px;height:96px;border-radius:16px;overflow:hidden;border:4px solid #FFF9F2;box-shadow:0 14px 28px -14px rgba(0,0,0,0.35);animation:wd-float 6s ease-in-out infinite;">
+            <image-slot id="m-hero2" shape="rect" fit="cover" placeholder="Hakau"></image-slot>
+          </div>
+          <div style="position:absolute;top:8px;right:-8px;background:#fff;border-radius:12px;padding:9px 12px;box-shadow:0 12px 24px -12px rgba(0,0,0,0.3);display:flex;align-items:center;gap:9px;">
+            <div style="width:30px;height:30px;border-radius:8px;background:#E4F4EC;color:#238152;display:flex;align-items:center;justify-content:center;font-size:15px;">✓</div>
+            <div style="line-height:1.15;"><div style="font-size:11px;font-weight:800;">Halal MUI</div><div style="font-size:9.5px;color:rgba(45,32,34,0.5);">& Higienis</div></div>
+          </div>
+        </div>
+
+        <div style="display:flex;justify-content:space-around;margin-top:24px;text-align:center;">
+          <div><div style="font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;color:#A91F34;">28+</div><div style="font-size:11px;color:rgba(45,32,34,0.55);font-weight:600;">Varian</div></div>
+          <div style="width:1px;background:rgba(45,32,34,0.12);"></div>
+          <div><div style="font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;color:#A91F34;">12</div><div style="font-size:11px;color:rgba(45,32,34,0.55);font-weight:600;">Outlet</div></div>
+          <div style="width:1px;background:rgba(45,32,34,0.12);"></div>
+          <div><div style="font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;color:#A91F34;">4.9★</div><div style="font-size:11px;color:rgba(45,32,34,0.55);font-weight:600;">Rating</div></div>
+        </div>
+      </div>
+
+      <!-- marquee -->
+      <div style="background:#A91F34;color:#fff;overflow:hidden;padding:11px 0;margin-top:22px;">
+        <div style="display:flex;width:max-content;animation:wd-marquee 20s linear infinite;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;">
+          <span style="display:flex;gap:26px;padding-right:26px;">{{ marqueeItems }}</span>
+          <span style="display:flex;gap:26px;padding-right:26px;">{{ marqueeItems2 }}</span>
+        </div>
+      </div>
+
+      <!-- ===== MENU (horizontal scroll) ===== -->
+      <div id="m-menu" style="padding:26px 0 6px;scroll-margin-top:96px;">
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;padding:0 20px;margin-bottom:16px;">
+          <div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:#A91F34;font-weight:600;">Menu Unggulan</div>
+            <h2 style="font-size:25px;font-weight:800;letter-spacing:-0.02em;margin-top:6px;">Favorit yang ludes</h2>
+          </div>
+          <span style="font-size:11px;color:rgba(45,32,34,0.4);font-weight:600;">geser →</span>
+        </div>
+        <div class="wd-hscroll" style="display:flex;gap:14px;overflow-x:auto;padding:4px 20px 8px;scroll-snap-type:x mandatory;">
+          {{ menuCards }}
+        </div>
+      </div>
+
+      <!-- ===== PROMO ===== -->
+      <div id="m-promo" style="padding:24px 20px 6px;scroll-margin-top:96px;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:#A91F34;font-weight:600;">Promo & Paket</div>
+        <h2 style="font-size:25px;font-weight:800;letter-spacing:-0.02em;margin-top:6px;">Makin banyak, makin hemat</h2>
+        <div style="position:relative;border-radius:20px;overflow:hidden;background:#2D2022;color:#fff;padding:24px;margin-top:16px;min-height:210px;display:flex;flex-direction:column;justify-content:flex-end;">
+          <div style="position:absolute;inset:0;opacity:0.5;"><image-slot id="m-promo-bg" shape="rect" fit="cover" placeholder="Foto paket keluarga"></image-slot></div>
+          <div style="position:absolute;inset:0;background:linear-gradient(180deg, rgba(45,32,34,0.1), rgba(45,32,34,0.88));"></div>
+          <div style="position:relative;">
+            <span style="display:inline-block;background:#FFD84D;color:#2D2022;font-weight:800;font-size:11px;padding:5px 11px;border-radius:999px;">HEMAT 25%</span>
+            <h3 style="font-size:24px;font-weight:800;margin-top:12px;letter-spacing:-0.02em;">Paket Keluarga</h3>
+            <p style="font-size:13px;color:rgba(255,255,255,0.75);margin-top:6px;">20 pcs dimsum + 4 minuman.</p>
+            <div style="display:flex;align-items:baseline;gap:10px;margin-top:12px;">
+              <span style="font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:700;color:#FFD84D;">Rp 145.000</span>
+              <span style="font-family:'JetBrains Mono',monospace;font-size:13px;color:rgba(255,255,255,0.5);text-decoration:line-through;">Rp 195.000</span>
+            </div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px;">
+          {{ promoCards }}
+        </div>
+      </div>
+
+      <!-- ===== TENTANG ===== -->
+      <div id="m-tentang" style="padding:28px 20px 6px;scroll-margin-top:96px;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:#A91F34;font-weight:600;">Cerita Kami</div>
+        <h2 style="font-size:25px;font-weight:800;letter-spacing:-0.02em;margin-top:6px;line-height:1.1;">Dari resep keluarga jadi favorit sejuta orang</h2>
+        <div style="position:relative;height:200px;margin-top:16px;">
+          <div style="position:absolute;top:0;left:0;width:66%;height:78%;border-radius:16px;overflow:hidden;box-shadow:0 20px 40px -22px rgba(127,22,40,0.5);"><image-slot id="m-about1" shape="rect" fit="cover" placeholder="Proses membuat"></image-slot></div>
+          <div style="position:absolute;bottom:0;right:0;width:52%;height:58%;border-radius:14px;overflow:hidden;border:5px solid #FFF9F2;box-shadow:0 16px 32px -18px rgba(0,0,0,0.35);"><image-slot id="m-about2" shape="rect" fit="cover" placeholder="Suasana outlet"></image-slot></div>
+          <div style="position:absolute;top:8px;right:6px;background:#A91F34;color:#fff;border-radius:12px;padding:10px 13px;text-align:center;box-shadow:0 14px 28px -14px rgba(127,22,40,0.7);"><div style="font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;">2018</div><div style="font-size:9px;font-weight:600;opacity:0.85;">Sejak</div></div>
+        </div>
+        <p style="font-size:14px;line-height:1.6;color:rgba(45,32,34,0.65);margin-top:16px;">Setiap dimsum dikukus dadakan — bukan stok kemarin. Fresh, terjangkau, dan bisa dinikmati siapa saja.</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px;">
+          {{ valueCards }}
+        </div>
+      </div>
+
+      <!-- ===== GALERI ===== -->
+      <div style="padding:26px 0 6px;">
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;padding:0 20px;margin-bottom:14px;">
+          <div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:#A91F34;font-weight:600;">Galeri</div>
+            <h2 style="font-size:25px;font-weight:800;letter-spacing:-0.02em;margin-top:6px;">Bikin ngiler, kan?</h2>
+          </div>
+        </div>
+        <div class="wd-hscroll" style="display:flex;gap:12px;overflow-x:auto;padding:4px 20px 8px;scroll-snap-type:x mandatory;">
+          {{ galleryItems }}
+        </div>
+      </div>
+
+      <!-- ===== TESTIMONI ===== -->
+      <div style="background:#fff;border-top:1px solid rgba(45,32,34,0.06);border-bottom:1px solid rgba(45,32,34,0.06);margin-top:26px;padding:26px 0;">
+        <div style="padding:0 20px;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:#A91F34;font-weight:600;">Kata Mereka</div>
+          <h2 style="font-size:25px;font-weight:800;letter-spacing:-0.02em;margin-top:6px;">Dicintai ribuan pelanggan</h2>
+        </div>
+        <div class="wd-hscroll" style="display:flex;gap:14px;overflow-x:auto;padding:16px 20px 4px;scroll-snap-type:x mandatory;">
+          {{ testiCards }}
+        </div>
+      </div>
+
+      <!-- ===== OUTLET ===== -->
+      <div id="m-outlet" style="padding:28px 20px 6px;scroll-margin-top:96px;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:#A91F34;font-weight:600;">Outlet & Pesan Online</div>
+        <h2 style="font-size:25px;font-weight:800;letter-spacing:-0.02em;margin-top:6px;line-height:1.1;">Ada di dekatmu</h2>
+        <div style="display:flex;gap:10px;margin-top:16px;">
+          <a href="#" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;height:48px;border-radius:12px;background:#238152;color:#fff;font-weight:700;font-size:13px;">🛵 GoFood</a>
+          <a href="#" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;height:48px;border-radius:12px;background:#00AA13;color:#fff;font-weight:700;font-size:13px;">🟢 Grab</a>
+          <a href="#" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;height:48px;border-radius:12px;background:#25D366;color:#fff;font-weight:700;font-size:13px;">💬 WA</a>
+        </div>
+        <div style="position:relative;height:170px;border-radius:18px;overflow:hidden;margin-top:16px;box-shadow:0 20px 40px -24px rgba(127,22,40,0.5);">
+          <image-slot id="m-map" shape="rect" fit="cover" placeholder="Peta / foto outlet"></image-slot>
+          <div style="position:absolute;top:12px;left:12px;background:#fff;border-radius:10px;padding:8px 12px;box-shadow:0 10px 20px -10px rgba(0,0,0,0.3);font-size:11.5px;font-weight:700;display:flex;align-items:center;gap:7px;"><span style="width:8px;height:8px;border-radius:50%;background:#2E9D64;"></span>12 outlet buka</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-top:16px;">
+          {{ outletList }}
+        </div>
+      </div>
+
+      <!-- ===== MEMBER ===== -->
+      <div id="m-member" style="padding:28px 20px 6px;scroll-margin-top:96px;">
+        <div style="position:relative;border-radius:22px;overflow:hidden;background:linear-gradient(130deg,#A91F34,#7F1628);color:#fff;padding:26px 24px;">
+          <div style="position:absolute;top:-40px;right:-30px;width:180px;height:180px;border-radius:50%;background:rgba(255,216,77,0.16);"></div>
+          <div style="position:relative;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:#FFD84D;font-weight:600;">Wanna Rewards</div>
+            <h2 style="font-size:26px;font-weight:800;letter-spacing:-0.02em;margin-top:8px;line-height:1.05;">Tiap gigitan bikin untung</h2>
+            <p style="font-size:13.5px;line-height:1.55;color:rgba(255,255,255,0.8);margin-top:10px;">Kumpulkan poin, tukar jadi dimsum gratis, nikmati promo member.</p>
+            <div style="width:100%;background:#fff;color:#2D2022;border-radius:16px;padding:18px;margin-top:18px;box-shadow:0 20px 40px -20px rgba(0,0,0,0.4);">
+              <div style="display:flex;align-items:center;justify-content:space-between;"><div style="font-weight:800;font-size:13px;"><span style="color:#A91F34;">WANNA</span> REWARDS</div><div style="width:26px;height:26px;border-radius:7px;background:#FFD84D;"></div></div>
+              <div style="margin-top:22px;font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:0.12em;color:rgba(45,32,34,0.55);">•••• •••• •••• 2481</div>
+              <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-top:12px;"><div><div style="font-size:10px;color:rgba(45,32,34,0.5);font-weight:600;">Member</div><div style="font-weight:700;font-size:13px;margin-top:1px;">Budi Santoso</div></div><div style="text-align:right;"><div style="font-size:10px;color:rgba(45,32,34,0.5);font-weight:600;">Poin</div><div style="font-family:'JetBrains Mono',monospace;font-weight:700;font-size:18px;color:#A91F34;margin-top:1px;">3.820</div></div></div>
+            </div>
+            <a href="#" style="display:flex;align-items:center;justify-content:center;height:48px;margin-top:16px;border-radius:12px;background:#FFD84D;color:#2D2022;font-weight:800;font-size:14px;">Daftar Member Gratis</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== FAQ ===== -->
+      <div style="padding:28px 20px 6px;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:#A91F34;font-weight:600;">FAQ</div>
+        <h2 style="font-size:25px;font-weight:800;letter-spacing:-0.02em;margin-top:6px;">Sering ditanya</h2>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-top:16px;">
+          {{ faqItems }}
+        </div>
+      </div>
+
+      <!-- ===== FOOTER ===== -->
+      <div style="margin-top:28px;background:#2D2022;color:rgba(255,255,255,0.7);padding:30px 20px 110px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:38px;height:38px;border-radius:10px;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;"><img src="assets/logo-icon.jpg" alt="Wanna Dimsum" style="width:34px;height:34px;object-fit:contain;" /></div>
+          <div style="line-height:1.1;"><div style="font-size:14px;font-weight:800;color:#fff;"><span style="color:#FFD84D;">WANNA</span> DIMSUM</div><div style="font-family:'JetBrains Mono',monospace;font-size:8px;letter-spacing:0.12em;color:rgba(255,255,255,0.45);text-transform:uppercase;margin-top:2px;">Snap Into The New Taste</div></div>
+        </div>
+        <p style="font-size:13px;line-height:1.6;margin-top:14px;">Dimsum autentik, fresh setiap hari. Dinikmati di outlet atau diantar ke rumah.</p>
+        <div style="display:flex;gap:9px;margin-top:16px;">
+          <a href="#" style="width:38px;height:38px;border-radius:10px;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:16px;">📷</a>
+          <a href="#" style="width:38px;height:38px;border-radius:10px;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:16px;">🎵</a>
+          <a href="#" style="width:38px;height:38px;border-radius:10px;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:16px;">📘</a>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px 20px;margin-top:20px;font-size:12.5px;">
+          <a href="#" style="color:rgba(255,255,255,0.7);">📞 0800-1234-5678</a>
+          <a href="#" style="color:rgba(255,255,255,0.7);">✉️ halo@wannadimsum.id</a>
+        </div>
+        <div style="border-top:1px solid rgba(255,255,255,0.1);margin-top:18px;padding-top:16px;font-size:11px;color:rgba(255,255,255,0.45);">© 2026 Wanna Dimsum. Seluruh hak cipta dilindungi.</div>
+      </div>
+
+      <!-- ===== STICKY ORDER BAR ===== -->
+      <div style="position:sticky;bottom:0;z-index:56;padding:12px 16px calc(12px + env(safe-area-inset-bottom));background:rgba(255,249,242,0.92);backdrop-filter:blur(12px);border-top:1px solid rgba(45,32,34,0.08);display:flex;align-items:center;gap:12px;">
+        <div style="flex:1;line-height:1.15;">
+          <div style="font-size:11px;color:rgba(45,32,34,0.5);font-weight:600;">Mulai dari</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:17px;font-weight:700;color:#A91F34;">Rp 18.000</div>
+        </div>
+        <a href="#m-outlet" style="display:inline-flex;align-items:center;gap:8px;height:52px;padding:0 26px;border-radius:14px;background:#FFD84D;color:#2D2022;font-weight:800;font-size:16px;box-shadow:0 14px 26px -12px rgba(233,154,34,0.85);">Pesan Sekarang →</a>
+      </div>
+
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:430,&quot;height&quot;:900}}">
+class Component extends DCLogic {
+  state = { openFaq: 0, menuOpen: false };
+
+  MENU = [
+    { name: 'Hakau Udang', desc: 'Kulit kenyal, isi udang utuh', price: 24000, tag: ['Best Seller', '#A91F34'] },
+    { name: 'Dimsum Ayam', desc: 'Klasik favorit sejuta umat', price: 18000, tag: ['Favorit', '#238152'] },
+    { name: 'Xiao Long Bao', desc: 'Berisi kuah kaldu hangat', price: 28000, tag: ['Signature', '#A9791F'] },
+    { name: 'Lumpia Udang', desc: 'Digoreng garing tiap order', price: 20000, tag: ['Crispy', '#3A5BB0'] },
+  ];
+  PROMO = [
+    { name: 'Paket Berdua', desc: '10 pcs + 2 minuman', price: 78000, old: 98000, off: 'HEMAT 20%' },
+    { name: 'Paket Hemat A', desc: '4 varian pilihan', price: 45000, old: 58000, off: 'HEMAT 22%' },
+  ];
+  VALUES = [
+    { icon: '🥟', t: 'Fresh Dadakan', d: 'Dikukus saat dipesan.' },
+    { icon: '🌿', t: 'Bahan Pilihan', d: 'Udang & ayam segar.' },
+    { icon: '✓', t: 'Halal MUI', d: 'Bersih & higienis.' },
+    { icon: '💛', t: 'Harga Ramah', d: 'Enak nggak harus mahal.' },
+  ];
+  TESTI = [
+    { name: 'Rina W.', role: 'Kemang', text: 'Hakau-nya juara! Udangnya berasa, masih anget pas nyampe.', stars: 5 },
+    { name: 'Dimas P.', role: 'Senayan', text: 'Paket keluarga worth it buat kumpul. Harga bersahabat.', stars: 5 },
+    { name: 'Sarah A.', role: 'BSD', text: 'Pesan GoFood cepet, packaging rapi, nggak hancur!', stars: 5 },
+  ];
+  OUTLETS = [
+    { name: 'WD Kemang', addr: 'Jl. Kemang Raya No. 12', hours: '10–22' },
+    { name: 'WD Senayan', addr: 'Senayan City, Lt. 3', hours: '10–22' },
+    { name: 'WD BSD', addr: 'BSD Green Office Park', hours: '10–21' },
+  ];
+  FAQS = [
+    { q: 'Apakah semua dimsum halal?', a: 'Ya, seluruh produk tersertifikasi halal MUI dan diproses higienis.' },
+    { q: 'Bagaimana cara pesan online?', a: 'Lewat GoFood, GrabFood, atau WhatsApp outlet terdekat.' },
+    { q: 'Apakah tetap hangat saat diantar?', a: 'Kami pakai kemasan khusus penahan panas agar sampai selagi hangat.' },
+    { q: 'Apa itu Wanna Rewards?', a: 'Program member gratis: 1 poin tiap Rp 1.000, tukar dimsum gratis.' },
+  ];
+  NAV = [['Menu', '#m-menu'], ['Promo', '#m-promo'], ['Tentang', '#m-tentang'], ['Outlet', '#m-outlet'], ['Member', '#m-member']];
+
+  fmt(n) { return 'Rp ' + n.toLocaleString('id-ID'); }
+
+  goTo(hash) {
+    this.setState({ menuOpen: false });
+    const el = document.querySelector(hash);
+    const scroller = document.querySelector('.wd-scr');
+    if (el && scroller) { const y = el.offsetTop - 96; scroller.scrollTo({ top: y, behavior: 'smooth' }); }
+  }
+
+  renderVals() {
+    const h = React.createElement;
+    const marquee = ['Hakau Udang', 'Xiao Long Bao', 'Siomay Ayam', 'Lumpia Udang', 'Ceker Dimsum', 'Es Teh Melati'];
+    const mk = (arr) => arr.map((m, i) => h('span', { key: i, style: { display: 'inline-flex', alignItems: 'center', gap: '26px' } }, m, h('span', { style: { color: '#FFD84D' } }, '✦')));
+
+    const burgerIcon = h('div', { style: { display: 'flex', flexDirection: 'column', gap: '4px' } },
+      [0, 1, 2].map(i => h('span', { key: i, style: { width: '18px', height: '2.4px', borderRadius: '2px', background: '#2D2022', transition: 'all .2s',
+        transform: this.state.menuOpen ? (i === 0 ? 'translateY(6.4px) rotate(45deg)' : i === 2 ? 'translateY(-6.4px) rotate(-45deg)' : 'none') : 'none',
+        opacity: this.state.menuOpen && i === 1 ? 0 : 1 } })));
+
+    const drawerEl = this.state.menuOpen ? h('div', { style: { position: 'sticky', top: '96px', zIndex: 49 } },
+      h('div', { onClick: () => this.setState({ menuOpen: false }), style: { position: 'absolute', top: 0, left: 0, right: 0, height: '640px', background: 'rgba(45,32,34,0.3)', backdropFilter: 'blur(2px)' } }),
+      h('div', { style: { position: 'relative', margin: '0 14px', background: '#fff', borderRadius: '18px', padding: '10px', boxShadow: '0 24px 48px -20px rgba(45,32,34,0.4)', animation: 'wd-float 0s' } },
+        this.NAV.map(([label, hash], i) => h('button', { key: i, onClick: () => this.goTo(hash), style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', border: 'none', background: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '16px', fontWeight: 700, color: '#2D2022', padding: '14px 14px', borderBottom: i < this.NAV.length - 1 ? '1px solid rgba(45,32,34,0.06)' : 'none', textAlign: 'left' } }, label, h('span', { style: { color: '#A91F34' } }, '→'))),
+        h('a', { href: '#m-outlet', onClick: () => this.setState({ menuOpen: false }), style: { display: 'flex', alignItems: 'center', justifyContent: 'center', height: '50px', margin: '8px', borderRadius: '12px', background: '#A91F34', color: '#fff', fontWeight: 800, fontSize: '15px' } }, 'Pesan Sekarang'))) : null;
+
+    const menuCards = this.MENU.map((m, i) =>
+      h('div', { key: i, style: { flex: '0 0 auto', width: '168px', scrollSnapAlign: 'start', background: '#fff', border: '1px solid rgba(45,32,34,0.07)', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 10px 24px -18px rgba(127,22,40,0.4)' } },
+        h('div', { style: { position: 'relative', height: '120px', background: '#FFF4D6' } },
+          h('image-slot', { id: 'm-menu-' + i, shape: 'rect', fit: 'cover', placeholder: 'Foto ' + m.name }),
+          h('span', { style: { position: 'absolute', top: '10px', left: '10px', background: m.tag[1], color: '#fff', fontSize: '10px', fontWeight: 700, padding: '3px 9px', borderRadius: '999px' } }, m.tag[0])),
+        h('div', { style: { padding: '13px 13px 14px' } },
+          h('div', { style: { fontSize: '15px', fontWeight: 800 } }, m.name),
+          h('div', { style: { fontSize: '11.5px', color: 'rgba(45,32,34,0.55)', marginTop: '2px', lineHeight: 1.35, minHeight: '31px' } }, m.desc),
+          h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '10px' } },
+            h('span', { style: { fontFamily: "'JetBrains Mono',monospace", fontSize: '15px', fontWeight: 700, color: '#A91F34' } }, this.fmt(m.price)),
+            h('span', { style: { width: '30px', height: '30px', borderRadius: '9px', background: '#FFD84D', color: '#2D2022', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', fontWeight: 700 } }, '+')))));
+
+    const promoCards = this.PROMO.map((p, i) =>
+      h('div', { key: i, style: { background: '#fff', border: '1px solid rgba(45,32,34,0.07)', borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '170px' } },
+        h('div', {},
+          h('span', { style: { display: 'inline-block', background: '#FFF4D6', color: '#A9791F', fontWeight: 800, fontSize: '10px', padding: '4px 10px', borderRadius: '999px' } }, p.off),
+          h('h3', { style: { fontSize: '17px', fontWeight: 800, marginTop: '10px', letterSpacing: '-0.01em' } }, p.name),
+          h('p', { style: { fontSize: '12px', color: 'rgba(45,32,34,0.6)', marginTop: '4px' } }, p.desc)),
+        h('div', {},
+          h('div', { style: { display: 'flex', alignItems: 'baseline', gap: '7px' } },
+            h('span', { style: { fontFamily: "'JetBrains Mono',monospace", fontSize: '17px', fontWeight: 700, color: '#A91F34' } }, this.fmt(p.price)),
+            h('span', { style: { fontFamily: "'JetBrains Mono',monospace", fontSize: '11px', color: 'rgba(45,32,34,0.4)', textDecoration: 'line-through' } }, this.fmt(p.old))),
+          h('a', { href: '#m-outlet', style: { display: 'flex', alignItems: 'center', justifyContent: 'center', height: '40px', marginTop: '11px', borderRadius: '10px', background: '#2D2022', color: '#fff', fontWeight: 700, fontSize: '13px' } }, 'Pesan'))));
+
+    const valueCards = this.VALUES.map((v, i) =>
+      h('div', { key: i, style: { background: '#fff', border: '1px solid rgba(45,32,34,0.07)', borderRadius: '13px', padding: '14px' } },
+        h('div', { style: { width: '36px', height: '36px', borderRadius: '10px', background: '#FFF4D6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' } }, v.icon),
+        h('div', { style: { fontSize: '13.5px', fontWeight: 800, marginTop: '9px' } }, v.t),
+        h('div', { style: { fontSize: '11.5px', color: 'rgba(45,32,34,0.58)', marginTop: '2px', lineHeight: 1.4 } }, v.d)));
+
+    const galIcons = ['gal-1', 'gal-2', 'gal-3', 'gal-4', 'gal-5'];
+    const galleryItems = galIcons.map((g, i) =>
+      h('div', { key: i, style: { flex: '0 0 auto', width: i % 2 === 0 ? '200px' : '150px', height: '210px', borderRadius: '16px', overflow: 'hidden', scrollSnapAlign: 'start' } },
+        h('image-slot', { id: 'm-' + g, shape: 'rect', fit: 'cover', placeholder: 'Foto ' + (i + 1) })));
+
+    const testiCards = this.TESTI.map((t, i) =>
+      h('div', { key: i, style: { flex: '0 0 auto', width: '270px', scrollSnapAlign: 'start', background: '#FFF9F2', border: '1px solid rgba(45,32,34,0.07)', borderRadius: '16px', padding: '20px' } },
+        h('div', { style: { color: '#FFB020', fontSize: '15px', letterSpacing: '2px' } }, '★★★★★'.slice(0, t.stars)),
+        h('p', { style: { fontSize: '13.5px', lineHeight: 1.55, color: 'rgba(45,32,34,0.78)', marginTop: '11px' } }, '“' + t.text + '”'),
+        h('div', { style: { display: 'flex', alignItems: 'center', gap: '10px', marginTop: '16px' } },
+          h('div', { style: { width: '38px', height: '38px', borderRadius: '50%', background: '#A91F34', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '14px' } }, t.name.charAt(0)),
+          h('div', {}, h('div', { style: { fontWeight: 700, fontSize: '13px' } }, t.name), h('div', { style: { fontSize: '11px', color: 'rgba(45,32,34,0.5)' } }, 'Pelanggan · ' + t.role)))));
+
+    const outletList = this.OUTLETS.map((o, i) =>
+      h('div', { key: i, style: { display: 'flex', alignItems: 'center', gap: '12px', background: '#fff', border: '1px solid rgba(45,32,34,0.08)', borderRadius: '12px', padding: '12px 14px' } },
+        h('div', { style: { width: '36px', height: '36px', borderRadius: '9px', background: '#FFF1F2', color: '#A91F34', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 } }, '📍'),
+        h('div', { style: { flex: 1, minWidth: 0 } },
+          h('div', { style: { fontWeight: 700, fontSize: '13.5px' } }, o.name),
+          h('div', { style: { fontSize: '12px', color: 'rgba(45,32,34,0.55)', marginTop: '1px' } }, o.addr)),
+        h('div', { style: { fontFamily: "'JetBrains Mono',monospace", fontSize: '11px', color: '#238152', fontWeight: 600, flexShrink: 0 } }, o.hours)));
+
+    const faqItems = this.FAQS.map((f, i) => {
+      const open = this.state.openFaq === i;
+      return h('div', { key: i, style: { background: '#fff', border: '1px solid ' + (open ? 'rgba(169,31,52,0.3)' : 'rgba(45,32,34,0.08)'), borderRadius: '13px', overflow: 'hidden' } },
+        h('button', { onClick: () => this.setState({ openFaq: open ? -1 : i }), style: { width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '15px 16px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' } },
+          h('span', { style: { fontSize: '14px', fontWeight: 700, color: '#2D2022' } }, f.q),
+          h('span', { style: { flexShrink: 0, width: '25px', height: '25px', borderRadius: '7px', background: open ? '#A91F34' : '#FFF4D6', color: open ? '#fff' : '#A9791F', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', fontWeight: 700 } }, open ? '−' : '+')),
+        open ? h('div', { style: { padding: '0 16px 16px', fontSize: '13px', lineHeight: 1.55, color: 'rgba(45,32,34,0.65)' } }, f.a) : null);
+    });
+
+    return {
+      toggleMenu: () => this.setState({ menuOpen: !this.state.menuOpen }),
+      burgerIcon, drawerEl,
+      marqueeItems: mk(marquee), marqueeItems2: mk(marquee),
+      menuCards, promoCards, valueCards, galleryItems, testiCards, outletList, faqItems,
+    };
+  }
+}
+</script>
+</body>
+</html>

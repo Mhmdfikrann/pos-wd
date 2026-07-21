@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { background: #EDE4D8; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #2D2022; -webkit-font-smoothing: antialiased; letter-spacing: -0.006em; }
+  h1,h2,h3,p { margin: 0; }
+  ::selection { background: #FFD84D; color: #2D2022; }
+  .wd-scr::-webkit-scrollbar { display: none; }
+  .wd-scr { scrollbar-width: none; -ms-overflow-style: none; }
+  .wd-hscroll::-webkit-scrollbar { display: none; }
+  .wd-hscroll { scrollbar-width: none; }
+  input, button { font-family: inherit; }
+  input:focus { outline: none; }
+  @keyframes wd-float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+  @keyframes wd-pop { 0% { transform: scale(.8); opacity: 0; } 60% { transform: scale(1.05); } 100% { transform: scale(1); opacity: 1; } }
+  @keyframes wd-slideup { from { transform: translateY(40px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  @keyframes wd-toast { 0% { transform: translate(-50%,20px); opacity: 0; } 12%,88% { transform: translate(-50%,0); opacity: 1; } 100% { transform: translate(-50%,-8px); opacity: 0; } }
+  @keyframes wd-shine { from { background-position: -200px 0; } to { background-position: 320px 0; } }
+</style>
+<script src="./image-slot.js"></script>
+</helmet>
+
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:26px 12px;background:radial-gradient(circle at 50% 0%, #F6ECDD, #E4D8C7);">
+
+  <div style="position:relative;width:390px;height:844px;background:#111;border-radius:52px;padding:11px;box-shadow:0 50px 100px -30px rgba(90,40,20,0.55), 0 0 0 2px rgba(0,0,0,0.35);">
+    <div style="position:absolute;top:0;left:50%;transform:translateX(-50%);width:126px;height:31px;background:#111;border-radius:0 0 18px 18px;z-index:60;"></div>
+
+    <div class="wd-scr" style="position:relative;width:100%;height:100%;background:#FFF9F2;border-radius:42px;overflow:hidden;display:flex;flex-direction:column;">
+
+      <!-- status bar -->
+      <div style="flex-shrink:0;height:46px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 26px 6px;font-size:13px;font-weight:700;z-index:40;background:{{ statusBg }};color:{{ statusColor }};">
+        <span style="font-family:'JetBrains Mono',monospace;">09:41</span>
+        <span style="letter-spacing:1px;">📶 5G 🔋</span>
+      </div>
+
+      {{ body }}
+
+      {{ tabBar }}
+
+      {{ modal }}
+      {{ toast }}
+
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:430,&quot;height&quot;:900}}">
+class Component extends DCLogic {
+  state = {
+    loggedIn: false,
+    authMode: 'register', // 'register' | 'login' | 'otp'
+    screen: 'home',
+    points: 3820,
+    rewardFilter: 'Semua',
+    redeem: null,
+    toast: null,
+    form: { name: '', phone: '', email: '' },
+    loginPhone: '',
+    otp: ['', '', '', ''],
+    otpFrom: 'login',
+    resend: 0,
+  };
+
+  otpRefs = [];
+  resendTimer = null;
+
+  setAuth(mode) {
+    this.setState({ authMode: mode });
+    const s = document.querySelector('.wd-scr .wd-body');
+    if (s) s.scrollTop = 0;
+  }
+
+  startResend() {
+    clearInterval(this.resendTimer);
+    this.setState({ resend: 30 });
+    this.resendTimer = setInterval(() => {
+      this.setState(st => {
+        if (st.resend <= 1) { clearInterval(this.resendTimer); return { resend: 0 }; }
+        return { resend: st.resend - 1 };
+      });
+    }, 1000);
+  }
+
+  sendOtp(from) {
+    const phone = from === 'register' ? this.state.form.phone : this.state.loginPhone;
+    if (!phone || phone.replace(/\D/g, '').length < 8) {
+      this.setState({ toast: { msg: 'Masukkan nomor telepon yang valid', ok: false } });
+      setTimeout(() => this.setState({ toast: null }), 2800);
+      return;
+    }
+    this.setState({ authMode: 'otp', otp: ['', '', '', ''], otpFrom: from });
+    this.startResend();
+    setTimeout(() => { if (this.otpRefs[0]) this.otpRefs[0].focus(); }, 120);
+  }
+
+  setOtp(i, v) {
+    v = v.replace(/\D/g, '').slice(-1);
+    const otp = this.state.otp.slice();
+    otp[i] = v;
+    this.setState({ otp });
+    if (v && i < 3 && this.otpRefs[i + 1]) this.otpRefs[i + 1].focus();
+    if (otp.every(x => x !== '')) setTimeout(() => this.verifyOtp(otp.join('')), 180);
+  }
+
+  otpKey(i, e) {
+    if (e.key === 'Backspace' && !this.state.otp[i] && i > 0 && this.otpRefs[i - 1]) this.otpRefs[i - 1].focus();
+  }
+
+  verifyOtp() {
+    clearInterval(this.resendTimer);
+    if (this.state.otpFrom === 'register') {
+      this.doRegister();
+    } else {
+      this.setState({ loggedIn: true, authMode: 'register', screen: 'home', toast: { msg: 'Berhasil masuk. Selamat datang kembali! 👋', ok: true } });
+      setTimeout(() => this.setState({ toast: null }), 3400);
+    }
+  }
+
+  MEMBER = { name: 'Budi Santoso', tier: 'Silver', nextTier: 'Gold', nextAt: 5000, since: '2024', visits: 42, spend: 1840000, card: '2481' };
+
+  PROMOS = [
+    { icon: '🥟', off: 'BELI 2 GRATIS 1', name: 'Hakau Udang', desc: 'Beli 2 porsi Hakau Udang, gratis 1 porsi. Berlaku semua outlet.', until: '31 Jul', color: '#A91F34' },
+    { icon: '👨‍👩‍👧', off: 'DISKON 25%', name: 'Paket Keluarga', desc: '20 pcs dimsum + 4 minuman. Hemat Rp 50.000.', until: '31 Jul', color: '#A9791F' },
+    { icon: '⚡', off: 'POIN 2X', name: 'Weekend Double Point', desc: 'Setiap transaksi Sabtu–Minggu dapat poin dua kali lipat.', until: 'Tiap weekend', color: '#3A5BB0' },
+    { icon: '🛵', off: 'GRATIS ONGKIR', name: 'Antar Gratis', desc: 'Min. belanja Rp 50.000 via aplikasi. Radius 5 km.', until: '25 Jul', color: '#238152' },
+  ];
+
+  REWARDS = [
+    { cat: 'Voucher', icon: '🎟️', name: 'Voucher Rp 10.000', sub: 'Potongan belanja', cost: 1000 },
+    { cat: 'Gratis', icon: '🧋', name: 'Es Teh Melati', sub: 'Gratis 1 cup', cost: 500 },
+    { cat: 'Ongkir', icon: '🛵', name: 'Gratis Ongkir', sub: '1x pengiriman', cost: 800 },
+    { cat: 'Paket', icon: '🥟', name: 'Hakau Udang', sub: 'Gratis 1 porsi (4pcs)', cost: 1500 },
+    { cat: 'Voucher', icon: '🎟️', name: 'Voucher Rp 25.000', sub: 'Potongan belanja', cost: 2300 },
+    { cat: 'Paket', icon: '🍱', name: 'Paket Dimsum 6pcs', sub: 'Mix varian pilihan', cost: 2800 },
+    { cat: 'Voucher', icon: '💳', name: 'Voucher Rp 50.000', sub: 'Potongan belanja', cost: 4500 },
+    { cat: 'Paket', icon: '👨‍👩‍👧', name: 'Paket Keluarga 20pcs', sub: '+ 4 minuman', cost: 6000 },
+  ];
+
+  HISTORY = [
+    { type: 'earn', pts: 24, name: 'Hakau Udang · 1 porsi', outlet: 'WD Kemang', date: '18 Jul' },
+    { type: 'earn', pts: 45, name: 'Paket Berdua', outlet: 'WD Senayan', date: '15 Jul' },
+    { type: 'redeem', pts: 1000, name: 'Tukar Voucher Rp 10.000', outlet: 'App', date: '12 Jul' },
+    { type: 'earn', pts: 18, name: 'Dimsum Ayam · 1 porsi', outlet: 'WD Kemang', date: '10 Jul' },
+    { type: 'earn', pts: 80, name: 'Paket Keluarga', outlet: 'WD BSD', date: '5 Jul' },
+    { type: 'redeem', pts: 500, name: 'Tukar Es Teh Melati', outlet: 'App', date: '2 Jul' },
+    { type: 'earn', pts: 32, name: 'Xiao Long Bao · 1 porsi', outlet: 'WD Senayan', date: '28 Jun' },
+  ];
+
+  TABS = [
+    ['home', 'Beranda', 'M3 10.5 12 3l9 7.5M5 9.5V20a1 1 0 001 1h4v-6h4v6h4a1 1 0 001-1V9.5'],
+    ['rewards', 'Rewards', 'M12 3l2.5 5.5L20 9l-4 4 1 6-5-3-5 3 1-6-4-4 5.5-.5z'],
+    ['promo', 'Promo', 'M4 8V6a2 2 0 012-2h12a2 2 0 012 2v2a2 2 0 000 8v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2a2 2 0 000-8zM12 6v12'],
+    ['riwayat', 'Riwayat', 'M12 8v4l3 2M3 12a9 9 0 1018 0 9 9 0 00-18 0z'],
+    ['akun', 'Akun', 'M12 12a4 4 0 100-8 4 4 0 000 8zM5 21a7 7 0 0114 0'],
+  ];
+
+  fmt(n) { return 'Rp ' + n.toLocaleString('id-ID'); }
+  fmtP(n) { return n.toLocaleString('id-ID'); }
+
+  go(screen) {
+    this.setState({ screen });
+    const s = document.querySelector('.wd-scr .wd-body');
+    if (s) s.scrollTop = 0;
+  }
+
+  doRegister() {
+    this.setState({ loggedIn: true, screen: 'home', toast: { msg: 'Selamat datang, member baru! +100 poin bonus 🎉', ok: true } });
+    setTimeout(() => this.setState({ toast: null }), 3600);
+  }
+
+  confirmRedeem() {
+    const r = this.state.redeem;
+    if (!r) return;
+    this.setState({ points: this.state.points - r.cost, redeem: null, toast: { msg: r.name + ' berhasil ditukar!', ok: true } });
+    setTimeout(() => this.setState({ toast: null }), 3600);
+  }
+
+  // ---------- shared bits ----------
+  sectionHead(h, kicker, title, right) {
+    return h('div', { style: { display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '14px' } },
+      h('div', {},
+        h('div', { style: { fontFamily: "'JetBrains Mono',monospace", fontSize: '10px', letterSpacing: '0.14em', textTransform: 'uppercase', color: '#A91F34', fontWeight: 600 } }, kicker),
+        h('h2', { style: { fontSize: '21px', fontWeight: 800, letterSpacing: '-0.02em', marginTop: '5px' } }, title)),
+      right || null);
+  }
+
+  memberCard(h, compact) {
+    const m = this.MEMBER, p = this.state.points;
+    const pct = Math.min(100, Math.round(p / m.nextAt * 100));
+    return h('div', { style: { position: 'relative', borderRadius: '20px', overflow: 'hidden', background: 'linear-gradient(130deg,#A91F34,#7F1628)', color: '#fff', padding: '20px', boxShadow: '0 24px 44px -24px rgba(127,22,40,0.8)' } },
+      h('div', { style: { position: 'absolute', top: '-50px', right: '-40px', width: '190px', height: '190px', borderRadius: '50%', background: 'rgba(255,216,77,0.14)' } }),
+      h('div', { style: { position: 'absolute', bottom: '-60px', left: '-30px', width: '150px', height: '150px', borderRadius: '50%', background: 'rgba(255,255,255,0.06)' } }),
+      h('div', { style: { position: 'relative' } },
+        h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between' } },
+          h('div', { style: { fontWeight: 800, fontSize: '13px', letterSpacing: '0.02em' } }, h('span', { style: { color: '#FFD84D' } }, 'WANNA'), ' REWARDS'),
+          h('span', { style: { fontSize: '10px', fontWeight: 700, background: 'rgba(255,216,77,0.22)', color: '#FFD84D', padding: '4px 10px', borderRadius: '999px', border: '1px solid rgba(255,216,77,0.4)' } }, '⬥ ' + m.tier)),
+        h('div', { style: { marginTop: '18px', fontSize: '11px', color: 'rgba(255,255,255,0.7)', fontWeight: 600 } }, 'Poin kamu'),
+        h('div', { style: { display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '2px' } },
+          h('div', { style: { fontFamily: "'JetBrains Mono',monospace", fontSize: '38px', fontWeight: 700, lineHeight: 1, color: '#FFD84D' } }, this.fmtP(p)),
+          h('div', { style: { fontSize: '13px', fontWeight: 700, opacity: 0.8 } }, 'poin')),
+        h('div', { style: { marginTop: '16px' } },
+          h('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '10.5px', color: 'rgba(255,255,255,0.75)', fontWeight: 600, marginBottom: '6px' } },
+            h('span', {}, 'Menuju ' + m.nextTier),
+            h('span', { style: { fontFamily: "'JetBrains Mono',monospace" } }, this.fmtP(m.nextAt - p) + ' lagi')),
+          h('div', { style: { height: '7px', borderRadius: '999px', background: 'rgba(0,0,0,0.25)', overflow: 'hidden' } },
+            h('div', { style: { height: '100%', width: pct + '%', borderRadius: '999px', background: 'linear-gradient(90deg,#FFD84D,#FFB020)' } }))),
+        compact ? null : h('div', { style: { display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: '18px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.15)' } },
+          h('div', {}, h('div', { style: { fontSize: '10px', color: 'rgba(255,255,255,0.6)', fontWeight: 600 } }, 'Member'), h('div', { style: { fontWeight: 700, fontSize: '14px', marginTop: '2px' } }, m.name)),
+          h('div', { style: { fontFamily: "'JetBrains Mono',monospace", fontSize: '13px', letterSpacing: '0.12em', color: 'rgba(255,255,255,0.7)' } }, '•••• ' + m.card))));
+  }
+
+  // ---------- screens ----------
+  renderHome(h) {
+    const m = this.MEMBER;
+    const quick = [
+      ['🎁', 'Tukar Poin', () => this.go('rewards')],
+      ['🏷️', 'Promo', () => this.go('promo')],
+      ['🧾', 'Riwayat', () => this.go('riwayat')],
+      ['📍', 'Outlet', () => this.setState({ toast: { msg: '12 outlet buka hari ini', ok: true } }, () => setTimeout(() => this.setState({ toast: null }), 2600)) ],
+    ];
+    const nearRewards = this.REWARDS.filter(r => r.cost <= this.state.points).slice(0, 4);
+    return h('div', {},
+      h('div', { style: { padding: '6px 20px 14px' } },
+        h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between' } },
+          h('div', {},
+            h('div', { style: { fontSize: '13px', color: 'rgba(45,32,34,0.55)', fontWeight: 600 } }, 'Halo, selamat pagi 👋'),
+            h('div', { style: { fontSize: '20px', fontWeight: 800, marginTop: '1px' } }, m.name)),
+          h('div', { style: { width: '44px', height: '44px', borderRadius: '13px', background: '#A91F34', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '17px', boxShadow: '0 10px 20px -10px rgba(127,22,40,0.7)' } }, m.name.charAt(0)))),
+      h('div', { style: { padding: '0 20px' } }, this.memberCard(h)),
+      h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '10px', padding: '18px 20px 4px' } },
+        quick.map(([ic, label, fn], i) => h('button', { key: i, onClick: fn, style: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '7px', background: 'none', border: 'none', cursor: 'pointer', padding: 0 } },
+          h('div', { style: { width: '52px', height: '52px', borderRadius: '15px', background: '#fff', border: '1px solid rgba(45,32,34,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', boxShadow: '0 8px 18px -12px rgba(127,22,40,0.4)' } }, ic),
+          h('div', { style: { fontSize: '11px', fontWeight: 700, color: '#2D2022' } }, label)))),
+      // stats
+      h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', padding: '16px 20px 4px' } },
+        [['Kunjungan', m.visits + 'x', '#FFF4D6', '#A9791F'], ['Total belanja', this.fmt(m.spend), '#FFF1F2', '#A91F34']].map(([t, v, bg, c], i) =>
+          h('div', { key: i, style: { background: '#fff', border: '1px solid rgba(45,32,34,0.07)', borderRadius: '14px', padding: '14px 16px' } },
+            h('div', { style: { fontSize: '11px', color: 'rgba(45,32,34,0.55)', fontWeight: 600 } }, t),
+            h('div', { style: { fontFamily: "'JetBrains Mono',monospace", fontSize: '17px', fontWeight: 700, color: c, marginTop: '4px' } }, v)))),
+      // promo strip
+      h('div', { style: { padding: '22px 0 4px' } },
+        h('div', { style: { padding: '0 20px' } }, this.sectionHead(h, 'Promo untukmu', 'Lagi ada apa?', h('button', { onClick: () => this.go('promo'), style: { fontSize: '11px', color: '#A91F34', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer' } }, 'Lihat semua'))),
+        h('div', { className: 'wd-hscroll', style: { display: 'flex', gap: '12px', overflowX: 'auto', padding: '2px 20px 6px', scrollSnapType: 'x mandatory' } },
+          this.PROMOS.slice(0, 3).map((p, i) => h('div', { key: i, onClick: () => this.go('promo'), style: { flex: '0 0 auto', width: '250px', scrollSnapAlign: 'start', cursor: 'pointer', borderRadius: '16px', overflow: 'hidden', background: p.color, color: '#fff', padding: '18px', position: 'relative' } },
+            h('div', { style: { position: 'absolute', top: '-30px', right: '-20px', width: '110px', height: '110px', borderRadius: '50%', background: 'rgba(255,255,255,0.12)' } }),
+            h('div', { style: { position: 'relative' } },
+              h('div', { style: { fontSize: '26px' } }, p.icon),
+              h('span', { style: { display: 'inline-block', marginTop: '8px', background: 'rgba(255,255,255,0.2)', fontSize: '10px', fontWeight: 800, padding: '4px 9px', borderRadius: '999px' } }, p.off),
+              h('div', { style: { fontSize: '17px', fontWeight: 800, marginTop: '8px' } }, p.name),
+              h('div', { style: { fontSize: '11.5px', opacity: 0.8, marginTop: '2px' } }, 'Berlaku s/d ' + p.until)))))),
+      // redeem preview
+      h('div', { style: { padding: '18px 20px 12px' } },
+        this.sectionHead(h, 'Tukar poin', 'Bisa kamu tukar sekarang', h('button', { onClick: () => this.go('rewards'), style: { fontSize: '11px', color: '#A91F34', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer' } }, 'Semua')),
+        h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' } },
+          nearRewards.map((r, i) => this.rewardCard(h, r, i)))));
+  }
+
+  rewardCard(h, r, i) {
+    const affordable = this.state.points >= r.cost;
+    return h('div', { key: i, style: { background: '#fff', border: '1px solid rgba(45,32,34,0.07)', borderRadius: '15px', padding: '14px', display: 'flex', flexDirection: 'column', boxShadow: '0 10px 22px -18px rgba(127,22,40,0.4)', opacity: affordable ? 1 : 0.72 } },
+      h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between' } },
+        h('div', { style: { width: '44px', height: '44px', borderRadius: '12px', background: '#FFF4D6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px' } }, r.icon),
+        h('span', { style: { fontSize: '9.5px', fontWeight: 700, color: 'rgba(45,32,34,0.45)', background: '#F6EFE4', padding: '3px 8px', borderRadius: '999px' } }, r.cat)),
+      h('div', { style: { fontSize: '14px', fontWeight: 800, marginTop: '11px', lineHeight: 1.2 } }, r.name),
+      h('div', { style: { fontSize: '11.5px', color: 'rgba(45,32,34,0.55)', marginTop: '2px', flex: 1 } }, r.sub),
+      h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '12px' } },
+        h('div', { style: { display: 'flex', alignItems: 'center', gap: '4px', fontFamily: "'JetBrains Mono',monospace", fontSize: '13px', fontWeight: 700, color: '#A91F34' } }, '⭐ ' + this.fmtP(r.cost)),
+        h('button', { onClick: () => affordable && this.setState({ redeem: r }), disabled: !affordable, style: { border: 'none', cursor: affordable ? 'pointer' : 'not-allowed', borderRadius: '9px', padding: '7px 13px', fontSize: '12px', fontWeight: 800, background: affordable ? '#FFD84D' : '#EDE4D8', color: affordable ? '#2D2022' : 'rgba(45,32,34,0.4)' } }, affordable ? 'Tukar' : 'Kurang')));
+  }
+
+  renderRewards(h) {
+    const cats = ['Semua', 'Voucher', 'Paket', 'Gratis', 'Ongkir'];
+    const list = this.state.rewardFilter === 'Semua' ? this.REWARDS : this.REWARDS.filter(r => r.cat === this.state.rewardFilter);
+    return h('div', { style: { padding: '6px 20px 12px' } },
+      h('div', { style: { padding: '2px 0 6px' } }, this.memberCard(h, true)),
+      h('div', { className: 'wd-hscroll', style: { display: 'flex', gap: '8px', overflowX: 'auto', padding: '16px 0 14px' } },
+        cats.map((c, i) => { const on = this.state.rewardFilter === c;
+          return h('button', { key: i, onClick: () => this.setState({ rewardFilter: c }), style: { flex: '0 0 auto', border: '1px solid ' + (on ? '#A91F34' : 'rgba(45,32,34,0.14)'), background: on ? '#A91F34' : '#fff', color: on ? '#fff' : 'rgba(45,32,34,0.7)', fontWeight: 700, fontSize: '12.5px', padding: '8px 15px', borderRadius: '999px', cursor: 'pointer' } }, c); })),
+      h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' } }, list.map((r, i) => this.rewardCard(h, r, i))));
+  }
+
+  renderPromo(h) {
+    return h('div', { style: { padding: '6px 20px 12px' } },
+      this.sectionHead(h, 'Promo & Penawaran', 'Hemat tiap hari'),
+      h('div', { style: { display: 'flex', flexDirection: 'column', gap: '14px', marginTop: '4px' } },
+        this.PROMOS.map((p, i) => h('div', { key: i, style: { borderRadius: '18px', overflow: 'hidden', border: '1px solid rgba(45,32,34,0.07)', background: '#fff', boxShadow: '0 14px 30px -24px rgba(127,22,40,0.5)' } },
+          h('div', { style: { position: 'relative', padding: '18px 18px 16px', background: p.color, color: '#fff' } },
+            h('div', { style: { position: 'absolute', top: '-24px', right: '-14px', width: '96px', height: '96px', borderRadius: '50%', background: 'rgba(255,255,255,0.12)' } }),
+            h('div', { style: { position: 'relative', display: 'flex', alignItems: 'center', gap: '12px' } },
+              h('div', { style: { width: '46px', height: '46px', borderRadius: '13px', background: 'rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px' } }, p.icon),
+              h('div', {}, h('span', { style: { display: 'inline-block', background: '#FFD84D', color: '#2D2022', fontSize: '10px', fontWeight: 800, padding: '3px 9px', borderRadius: '999px' } }, p.off),
+                h('div', { style: { fontSize: '18px', fontWeight: 800, marginTop: '5px' } }, p.name)))),
+          h('div', { style: { padding: '14px 18px 16px' } },
+            h('p', { style: { fontSize: '13px', lineHeight: 1.5, color: 'rgba(45,32,34,0.68)' } }, p.desc),
+            h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '14px' } },
+              h('span', { style: { fontSize: '11.5px', fontWeight: 700, color: 'rgba(45,32,34,0.5)' } }, '⏳ s/d ' + p.until),
+              h('button', { onClick: () => this.setState({ toast: { msg: 'Promo dipakai saat checkout di outlet', ok: true } }, () => setTimeout(() => this.setState({ toast: null }), 2800)), style: { border: 'none', cursor: 'pointer', background: '#2D2022', color: '#fff', fontWeight: 800, fontSize: '12.5px', padding: '9px 16px', borderRadius: '10px' } }, 'Pakai promo')))))));
+  }
+
+  renderRiwayat(h) {
+    const earned = this.HISTORY.filter(x => x.type === 'earn').reduce((a, b) => a + b.pts, 0);
+    const spent = this.HISTORY.filter(x => x.type === 'redeem').reduce((a, b) => a + b.pts, 0);
+    return h('div', { style: { padding: '6px 20px 12px' } },
+      this.sectionHead(h, 'Riwayat Poin', 'Aktivitas kamu'),
+      h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', margin: '2px 0 18px' } },
+        [['Total didapat', '+' + this.fmtP(earned), '#E4F4EC', '#238152'], ['Total ditukar', '−' + this.fmtP(spent), '#FFF1F2', '#A91F34']].map(([t, v, bg, c], i) =>
+          h('div', { key: i, style: { background: bg, borderRadius: '14px', padding: '14px 16px' } },
+            h('div', { style: { fontSize: '11px', color: 'rgba(45,32,34,0.6)', fontWeight: 600 } }, t),
+            h('div', { style: { fontFamily: "'JetBrains Mono',monospace", fontSize: '19px', fontWeight: 700, color: c, marginTop: '3px' } }, v + ' poin')))),
+      h('div', { style: { display: 'flex', flexDirection: 'column', gap: '10px' } },
+        this.HISTORY.map((x, i) => { const earn = x.type === 'earn';
+          return h('div', { key: i, style: { display: 'flex', alignItems: 'center', gap: '12px', background: '#fff', border: '1px solid rgba(45,32,34,0.07)', borderRadius: '13px', padding: '13px 14px' } },
+            h('div', { style: { width: '40px', height: '40px', borderRadius: '11px', flexShrink: 0, background: earn ? '#E4F4EC' : '#FFF1F2', color: earn ? '#238152' : '#A91F34', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' } }, earn ? '↑' : '↓'),
+            h('div', { style: { flex: 1, minWidth: 0 } },
+              h('div', { style: { fontSize: '13.5px', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } }, x.name),
+              h('div', { style: { fontSize: '11.5px', color: 'rgba(45,32,34,0.5)', marginTop: '1px' } }, x.outlet + ' · ' + x.date)),
+            h('div', { style: { fontFamily: "'JetBrains Mono',monospace", fontSize: '14px', fontWeight: 700, flexShrink: 0, color: earn ? '#238152' : '#A91F34' } }, (earn ? '+' : '−') + this.fmtP(x.pts))); })));
+  }
+
+  renderAkun(h) {
+    const m = this.MEMBER;
+    const rows = [
+      ['👤', 'Data diri', m.name],
+      ['📱', 'No. telepon', '0812-3456-7890'],
+      ['✉️', 'Email', 'budi.s@email.com'],
+      ['🔔', 'Notifikasi', 'Aktif'],
+      ['🎫', 'Voucher saya', '2 tersedia'],
+      ['❓', 'Bantuan', ''],
+    ];
+    return h('div', { style: { padding: '6px 20px 12px' } },
+      h('div', { style: { display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '4px 0 18px' } },
+        h('div', { style: { width: '74px', height: '74px', borderRadius: '50%', background: 'linear-gradient(135deg,#A91F34,#7F1628)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '30px', boxShadow: '0 14px 28px -14px rgba(127,22,40,0.8)' } }, m.name.charAt(0)),
+        h('div', { style: { fontSize: '19px', fontWeight: 800, marginTop: '12px' } }, m.name),
+        h('div', { style: { display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '5px', fontSize: '11.5px', fontWeight: 700, color: '#A9791F', background: '#FFF4D6', padding: '4px 11px', borderRadius: '999px' } }, '⬥ Member ' + m.tier + ' · sejak ' + m.since)),
+      this.memberCard(h, true),
+      h('div', { style: { background: '#fff', border: '1px solid rgba(45,32,34,0.07)', borderRadius: '16px', overflow: 'hidden', marginTop: '18px' } },
+        rows.map(([ic, label, val], i) => h('button', { key: i, style: { width: '100%', display: 'flex', alignItems: 'center', gap: '13px', padding: '15px 16px', background: 'none', border: 'none', borderBottom: i < rows.length - 1 ? '1px solid rgba(45,32,34,0.06)' : 'none', cursor: 'pointer', textAlign: 'left' } },
+          h('span', { style: { width: '34px', height: '34px', borderRadius: '10px', background: '#FFF4D6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 } }, ic),
+          h('span', { style: { flex: 1, fontSize: '14px', fontWeight: 700, color: '#2D2022' } }, label),
+          h('span', { style: { fontSize: '12.5px', color: 'rgba(45,32,34,0.5)', fontWeight: 600 } }, val),
+          h('span', { style: { color: 'rgba(45,32,34,0.3)', fontSize: '16px' } }, '›')))),
+      h('button', { onClick: () => this.setState({ loggedIn: false, screen: 'home' }), style: { width: '100%', marginTop: '16px', padding: '15px', borderRadius: '13px', border: '1px solid rgba(169,31,52,0.25)', background: '#fff', color: '#A91F34', fontWeight: 800, fontSize: '14px', cursor: 'pointer' } }, 'Keluar'),
+      h('div', { style: { textAlign: 'center', fontSize: '10.5px', color: 'rgba(45,32,34,0.35)', marginTop: '14px', fontFamily: "'JetBrains Mono',monospace" } }, 'Wanna Dimsum · v1.0'));
+  }
+
+  // ---------- register ----------
+  renderRegister(h) {
+    const f = this.state.form;
+    const field = (key, label, ph, type) => h('div', { style: { marginBottom: '14px' } },
+      h('label', { style: { display: 'block', fontSize: '12px', fontWeight: 700, color: 'rgba(45,32,34,0.6)', marginBottom: '6px' } }, label),
+      h('input', { type: type || 'text', value: f[key], placeholder: ph, onChange: (e) => this.setState({ form: Object.assign({}, f, { [key]: e.target.value }) }),
+        style: { width: '100%', height: '50px', borderRadius: '13px', border: '1.5px solid rgba(45,32,34,0.12)', background: '#fff', padding: '0 16px', fontSize: '15px', fontWeight: 600, color: '#2D2022' } }));
+    return h('div', { className: 'wd-body wd-scr', style: { flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' } },
+      h('div', { style: { flexShrink: 0, position: 'relative', padding: '30px 24px 46px', background: 'linear-gradient(150deg,#A91F34,#7F1628)', color: '#fff', textAlign: 'center', borderRadius: '0 0 30px 30px', overflow: 'hidden' } },
+        h('div', { style: { position: 'absolute', top: '-40px', right: '-30px', width: '160px', height: '160px', borderRadius: '50%', background: 'rgba(255,216,77,0.16)' } }),
+        h('div', { style: { position: 'relative' } },
+          h('div', { style: { width: '62px', height: '62px', margin: '0 auto', borderRadius: '17px', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', boxShadow: '0 14px 28px -12px rgba(0,0,0,0.4)' } },
+            h('img', { src: 'assets/logo-icon.jpg', alt: 'Wanna Dimsum', style: { width: '54px', height: '54px', objectFit: 'contain' } })),
+          h('div', { style: { display: 'inline-block', marginTop: '16px', fontFamily: "'JetBrains Mono',monospace", fontSize: '10px', letterSpacing: '0.14em', textTransform: 'uppercase', color: '#FFD84D', background: 'rgba(255,216,77,0.14)', border: '1px solid rgba(255,216,77,0.35)', padding: '5px 12px', borderRadius: '999px', fontWeight: 600 } }, '⭐ Wanna Rewards'),
+          h('h1', { style: { fontSize: '27px', fontWeight: 800, letterSpacing: '-0.02em', marginTop: '14px', lineHeight: 1.1 } }, 'Gabung & mulai\nkumpulkan poin'.split('\n').map((t, i) => h('span', { key: i, style: { display: 'block' } }, t))),
+          h('p', { style: { fontSize: '13.5px', color: 'rgba(255,255,255,0.8)', marginTop: '10px', lineHeight: 1.5 } }, 'Tiap belanja dapat poin, tukar jadi dimsum gratis & voucher.'))),
+      h('div', { style: { flex: 1, padding: '24px 24px 28px' } },
+        h('div', { style: { display: 'flex', gap: '8px', marginBottom: '20px' } },
+          [['🎁', '1 : 1.000', 'Poin per rupiah'], ['🥟', 'Gratis', 'Tukar dimsum'], ['🏷️', 'Eksklusif', 'Promo member']].map(([ic, a, b], i) =>
+            h('div', { key: i, style: { flex: 1, textAlign: 'center', background: '#FFF4D6', borderRadius: '13px', padding: '12px 6px' } },
+              h('div', { style: { fontSize: '20px' } }, ic),
+              h('div', { style: { fontSize: '12px', fontWeight: 800, marginTop: '4px', color: '#A9791F' } }, a),
+              h('div', { style: { fontSize: '9.5px', color: 'rgba(45,32,34,0.55)', fontWeight: 600, marginTop: '1px' } }, b)))),
+        field('name', 'Nama lengkap', 'Nama kamu'),
+        field('phone', 'No. telepon', '0812-xxxx-xxxx', 'tel'),
+        field('email', 'Email', 'nama@email.com', 'email'),
+        h('label', { style: { display: 'flex', alignItems: 'flex-start', gap: '9px', margin: '4px 0 18px', fontSize: '11.5px', color: 'rgba(45,32,34,0.6)', lineHeight: 1.5, cursor: 'pointer' } },
+          h('span', { style: { width: '18px', height: '18px', borderRadius: '5px', background: '#A91F34', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', flexShrink: 0, marginTop: '1px' } }, '✓'),
+          h('span', {}, 'Saya setuju dengan Syarat & Ketentuan serta Kebijakan Privasi Wanna Dimsum.')),
+        h('button', { onClick: () => this.sendOtp('register'), style: { width: '100%', height: '54px', borderRadius: '15px', border: 'none', cursor: 'pointer', background: '#FFD84D', color: '#2D2022', fontWeight: 800, fontSize: '16px', boxShadow: '0 16px 30px -14px rgba(233,154,34,0.9)' } }, 'Daftar Sekarang →'),
+        h('button', { onClick: () => this.setAuth('login'), style: { width: '100%', marginTop: '12px', padding: '12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', color: 'rgba(45,32,34,0.6)', fontWeight: 600 } }, 'Sudah punya akun? ', h('span', { style: { color: '#A91F34', fontWeight: 800 } }, 'Masuk'))));
+  }
+
+  authHeader(h, kicker, title, sub) {
+    return h('div', { style: { flexShrink: 0, position: 'relative', padding: '30px 24px 42px', background: 'linear-gradient(150deg,#A91F34,#7F1628)', color: '#fff', textAlign: 'center', borderRadius: '0 0 30px 30px', overflow: 'hidden' } },
+      h('div', { style: { position: 'absolute', top: '-40px', right: '-30px', width: '160px', height: '160px', borderRadius: '50%', background: 'rgba(255,216,77,0.16)' } }),
+      h('div', { style: { position: 'relative' } },
+        h('div', { style: { width: '62px', height: '62px', margin: '0 auto', borderRadius: '17px', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', boxShadow: '0 14px 28px -12px rgba(0,0,0,0.4)' } },
+          h('img', { src: 'assets/logo-icon.jpg', alt: 'Wanna Dimsum', style: { width: '54px', height: '54px', objectFit: 'contain' } })),
+        h('div', { style: { display: 'inline-block', marginTop: '16px', fontFamily: "'JetBrains Mono',monospace", fontSize: '10px', letterSpacing: '0.14em', textTransform: 'uppercase', color: '#FFD84D', background: 'rgba(255,216,77,0.14)', border: '1px solid rgba(255,216,77,0.35)', padding: '5px 12px', borderRadius: '999px', fontWeight: 600 } }, kicker),
+        h('h1', { style: { fontSize: '27px', fontWeight: 800, letterSpacing: '-0.02em', marginTop: '14px', lineHeight: 1.1 } }, title),
+        h('p', { style: { fontSize: '13.5px', color: 'rgba(255,255,255,0.8)', marginTop: '10px', lineHeight: 1.5 } }, sub)));
+  }
+
+  renderLogin(h) {
+    const phone = this.state.loginPhone;
+    return h('div', { className: 'wd-body wd-scr', style: { flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' } },
+      this.authHeader(h, '⭐ Wanna Rewards', 'Masuk ke akunmu', 'Cek poin, tukar reward, dan lihat promo terbaru.'),
+      h('div', { style: { flex: 1, padding: '26px 24px 28px' } },
+        h('div', { style: { marginBottom: '16px' } },
+          h('label', { style: { display: 'block', fontSize: '12px', fontWeight: 700, color: 'rgba(45,32,34,0.6)', marginBottom: '6px' } }, 'No. telepon terdaftar'),
+          h('div', { style: { display: 'flex', alignItems: 'center', height: '52px', borderRadius: '13px', border: '1.5px solid rgba(45,32,34,0.12)', background: '#fff', overflow: 'hidden' } },
+            h('span', { style: { padding: '0 14px', fontSize: '15px', fontWeight: 700, color: 'rgba(45,32,34,0.55)', borderRight: '1.5px solid rgba(45,32,34,0.1)', height: '100%', display: 'flex', alignItems: 'center' } }, '🇮🇩 +62'),
+            h('input', { type: 'tel', value: phone, placeholder: '812-3456-7890', onChange: (e) => this.setState({ loginPhone: e.target.value }), style: { flex: 1, height: '100%', border: 'none', padding: '0 14px', fontSize: '15px', fontWeight: 600, color: '#2D2022', background: 'transparent' } }))),
+        h('p', { style: { fontSize: '12px', color: 'rgba(45,32,34,0.55)', lineHeight: 1.5, marginBottom: '22px' } }, 'Kami akan mengirim kode OTP 4 digit via SMS ke nomor ini.'),
+        h('button', { onClick: () => this.sendOtp('login'), style: { width: '100%', height: '54px', borderRadius: '15px', border: 'none', cursor: 'pointer', background: '#A91F34', color: '#fff', fontWeight: 800, fontSize: '16px', boxShadow: '0 16px 30px -16px rgba(127,22,40,0.9)' } }, 'Kirim Kode OTP →'),
+        h('div', { style: { display: 'flex', alignItems: 'center', gap: '12px', margin: '22px 0' } },
+          h('div', { style: { flex: 1, height: '1px', background: 'rgba(45,32,34,0.12)' } }),
+          h('span', { style: { fontSize: '11px', fontWeight: 700, color: 'rgba(45,32,34,0.4)' } }, 'ATAU'),
+          h('div', { style: { flex: 1, height: '1px', background: 'rgba(45,32,34,0.12)' } })),
+        h('button', { onClick: () => this.setAuth('register'), style: { width: '100%', height: '52px', borderRadius: '13px', border: '1.5px solid rgba(45,32,34,0.14)', background: '#fff', cursor: 'pointer', fontSize: '14px', fontWeight: 800, color: '#2D2022' } }, 'Belum punya akun? Daftar')));
+  }
+
+  renderOtp(h) {
+    const phone = this.state.otpFrom === 'register' ? this.state.form.phone : this.state.loginPhone;
+    const filled = this.state.otp;
+    return h('div', { className: 'wd-body wd-scr', style: { flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' } },
+      this.authHeader(h, '🔒 Verifikasi', 'Masukkan kode OTP', 'Kode 4 digit sudah dikirim ke nomormu.'),
+      h('div', { style: { flex: 1, padding: '30px 24px 28px', textAlign: 'center' } },
+        h('div', { style: { fontSize: '14px', fontWeight: 700, marginBottom: '4px' } }, '+62 ' + (phone || '812-3456-7890')),
+        h('button', { onClick: () => this.setAuth(this.state.otpFrom === 'register' ? 'register' : 'login'), style: { fontSize: '12px', color: '#A91F34', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', marginBottom: '26px' } }, 'Ganti nomor'),
+        h('div', { style: { display: 'flex', justifyContent: 'center', gap: '12px', marginBottom: '26px' } },
+          [0, 1, 2, 3].map(i => h('input', { key: i, ref: (el) => this.otpRefs[i] = el, type: 'tel', inputMode: 'numeric', maxLength: 1, value: filled[i], onChange: (e) => this.setOtp(i, e.target.value), onKeyDown: (e) => this.otpKey(i, e),
+            style: { width: '58px', height: '68px', textAlign: 'center', borderRadius: '15px', border: '2px solid ' + (filled[i] ? '#A91F34' : 'rgba(45,32,34,0.14)'), background: filled[i] ? '#FFF1F2' : '#fff', fontFamily: "'JetBrains Mono',monospace", fontSize: '28px', fontWeight: 700, color: '#2D2022' } }))),
+        h('div', { style: { fontSize: '13px', color: 'rgba(45,32,34,0.55)', fontWeight: 600 } },
+          this.state.resend > 0
+            ? h('span', {}, 'Kirim ulang kode dalam ', h('span', { style: { fontFamily: "'JetBrains Mono',monospace", fontWeight: 700, color: '#2D2022' } }, '00:' + String(this.state.resend).padStart(2, '0')))
+            : h('button', { onClick: () => { this.startResend(); this.setState({ toast: { msg: 'Kode OTP baru terkirim', ok: true } }); setTimeout(() => this.setState({ toast: null }), 2400); }, style: { fontSize: '13px', color: '#A91F34', fontWeight: 800, background: 'none', border: 'none', cursor: 'pointer' } }, 'Kirim ulang kode')),
+        h('button', { onClick: () => this.verifyOtp(), style: { width: '100%', height: '54px', borderRadius: '15px', border: 'none', cursor: 'pointer', background: '#FFD84D', color: '#2D2022', fontWeight: 800, fontSize: '16px', marginTop: '30px', boxShadow: '0 16px 30px -14px rgba(233,154,34,0.9)' } }, 'Verifikasi & Lanjut →'),
+        h('p', { style: { fontSize: '11px', color: 'rgba(45,32,34,0.4)', marginTop: '18px', lineHeight: 1.5 } }, 'Demo: masukkan angka apa saja untuk lanjut.')));
+  }
+
+  renderVals() {
+    const h = React.createElement;
+    const loggedIn = this.state.loggedIn;
+
+    if (!loggedIn) {
+      const authBody = this.state.authMode === 'login' ? this.renderLogin(h)
+        : this.state.authMode === 'otp' ? this.renderOtp(h)
+        : this.renderRegister(h);
+      return {
+        statusBg: '#A91F34', statusColor: '#fff',
+        body: authBody,
+        tabBar: null, modal: null, toast: this.toastEl(h),
+      };
+    }
+
+    const titles = { home: '', rewards: 'Rewards', promo: 'Promo', riwayat: 'Riwayat', akun: 'Akun' };
+    const screenMap = { home: this.renderHome, rewards: this.renderRewards, promo: this.renderPromo, riwayat: this.renderRiwayat, akun: this.renderAkun };
+    const content = screenMap[this.state.screen].call(this, h);
+
+    const header = this.state.screen === 'home' ? null : h('div', { style: { flexShrink: 0, padding: '4px 20px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' } },
+      h('div', { style: { fontSize: '22px', fontWeight: 800, letterSpacing: '-0.02em' } }, titles[this.state.screen]),
+      h('div', { style: { display: 'flex', alignItems: 'center', gap: '6px', fontFamily: "'JetBrains Mono',monospace", fontSize: '13px', fontWeight: 700, color: '#A91F34', background: '#FFF4D6', padding: '7px 12px', borderRadius: '999px' } }, '⭐ ' + this.fmtP(this.state.points)));
+
+    const body = h('div', { className: 'wd-body wd-scr', style: { flex: 1, overflowY: 'auto', paddingBottom: '8px' } }, header, content);
+
+    return {
+      statusBg: 'rgba(255,249,242,0.92)', statusColor: '#2D2022',
+      body,
+      tabBar: this.tabBarEl(h),
+      modal: this.modalEl(h),
+      toast: this.toastEl(h),
+    };
+  }
+
+  tabBarEl(h) {
+    return h('div', { style: { flexShrink: 0, display: 'flex', padding: '8px 8px calc(8px + env(safe-area-inset-bottom))', background: 'rgba(255,249,242,0.95)', backdropFilter: 'blur(12px)', borderTop: '1px solid rgba(45,32,34,0.08)', boxShadow: '0 -8px 24px -18px rgba(45,32,34,0.3)' } },
+      this.TABS.map(([id, label, path]) => { const on = this.state.screen === id;
+        return h('button', { key: id, onClick: () => this.go(id), style: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', background: 'none', border: 'none', cursor: 'pointer', padding: '6px 0', color: on ? '#A91F34' : 'rgba(45,32,34,0.4)' } },
+          h('svg', { width: 23, height: 23, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: on ? 2.4 : 1.9, strokeLinecap: 'round', strokeLinejoin: 'round' }, h('path', { d: path })),
+          h('span', { style: { fontSize: '10px', fontWeight: on ? 800 : 600 } }, label)); }));
+  }
+
+  modalEl(h) {
+    const r = this.state.redeem;
+    if (!r) return null;
+    return h('div', { onClick: () => this.setState({ redeem: null }), style: { position: 'absolute', inset: 0, zIndex: 70, borderRadius: '42px', overflow: 'hidden', display: 'flex', alignItems: 'flex-end', background: 'rgba(45,32,34,0.5)', backdropFilter: 'blur(3px)' } },
+      h('div', { onClick: (e) => e.stopPropagation(), style: { width: '100%', background: '#FFF9F2', borderRadius: '26px 26px 42px 42px', padding: '10px 24px calc(28px + env(safe-area-inset-bottom))', animation: 'wd-slideup .28s ease' } },
+        h('div', { style: { width: '42px', height: '4px', borderRadius: '999px', background: 'rgba(45,32,34,0.18)', margin: '0 auto 22px' } }),
+        h('div', { style: { width: '74px', height: '74px', margin: '0 auto', borderRadius: '20px', background: '#FFF4D6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '36px', animation: 'wd-pop .35s ease' } }, r.icon),
+        h('h3', { style: { textAlign: 'center', fontSize: '20px', fontWeight: 800, marginTop: '16px' } }, 'Tukar ' + r.name + '?'),
+        h('p', { style: { textAlign: 'center', fontSize: '13.5px', color: 'rgba(45,32,34,0.6)', marginTop: '6px', lineHeight: 1.5 } }, r.sub + '. Voucher masuk ke "Voucher saya" dan berlaku 30 hari.'),
+        h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', border: '1px solid rgba(45,32,34,0.08)', borderRadius: '14px', padding: '14px 16px', margin: '20px 0' } },
+          h('div', {},
+            h('div', { style: { fontSize: '11px', color: 'rgba(45,32,34,0.5)', fontWeight: 600 } }, 'Poin dipakai'),
+            h('div', { style: { fontFamily: "'JetBrains Mono',monospace", fontSize: '18px', fontWeight: 700, color: '#A91F34', marginTop: '2px' } }, '⭐ ' + this.fmtP(r.cost))),
+          h('div', { style: { textAlign: 'right' } },
+            h('div', { style: { fontSize: '11px', color: 'rgba(45,32,34,0.5)', fontWeight: 600 } }, 'Sisa poin'),
+            h('div', { style: { fontFamily: "'JetBrains Mono',monospace", fontSize: '18px', fontWeight: 700, color: '#238152', marginTop: '2px' } }, this.fmtP(this.state.points - r.cost)))),
+        h('button', { onClick: () => this.confirmRedeem(), style: { width: '100%', height: '54px', borderRadius: '15px', border: 'none', cursor: 'pointer', background: '#A91F34', color: '#fff', fontWeight: 800, fontSize: '16px' } }, 'Ya, tukar sekarang'),
+        h('button', { onClick: () => this.setState({ redeem: null }), style: { width: '100%', marginTop: '10px', padding: '12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px', fontWeight: 700, color: 'rgba(45,32,34,0.55)' } }, 'Batal')));
+  }
+
+  toastEl(h) {
+    const t = this.state.toast;
+    if (!t) return null;
+    return h('div', { style: { position: 'absolute', bottom: '96px', left: '50%', zIndex: 80, transform: 'translateX(-50%)', display: 'flex', alignItems: 'center', gap: '10px', background: '#2D2022', color: '#fff', padding: '13px 18px', borderRadius: '14px', boxShadow: '0 20px 40px -16px rgba(0,0,0,0.6)', fontSize: '13px', fontWeight: 700, maxWidth: '320px', animation: 'wd-toast 3.6s ease forwards' } },
+      h('span', { style: { width: '22px', height: '22px', borderRadius: '50%', background: t.ok ? '#238152' : '#A91F34', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', flexShrink: 0 } }, t.ok ? '✓' : '!'),
+      h('span', {}, t.msg));
+  }
+}
+</script>
+</body>
+</html>

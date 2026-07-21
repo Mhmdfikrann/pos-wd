@@ -23,6 +23,11 @@ import {
   userOutlets,
   accounts,
   discounts,
+  customerMembers,
+  customerPointEvents,
+  customerRewards,
+  customerVouchers,
+  customerPromos,
 } from "./schema";
 import { seedCatalog } from "./seed-catalog";
 import { seedInventory } from "./seed-inventory";
@@ -132,6 +137,70 @@ async function main() {
     .values([
       { id: "promo_grand_opening_10", name: "Grand Opening 10%", type: "percent", value: 10, active: true },
       { id: "promo_dimsum_5k", name: "Potongan Dimsum 5rb", type: "amount", value: 5000, active: true },
+    ])
+    .onConflictDoNothing();
+
+  console.log("Seeding customer app demo data...");
+  const demoMemberId = "cust_budi_santoso";
+  const issuedAt = new Date().toISOString();
+  const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 90).toISOString();
+  const customerPasswordHash = await hashPassword("member12345");
+  await db
+    .insert(customerMembers)
+    .values({
+      id: demoMemberId,
+      fullName: "Budi Santoso",
+      phone: "6281234567890",
+      email: "budi@example.com",
+      passwordHash: customerPasswordHash,
+      termsAcceptedAt: issuedAt,
+      privacyAcceptedAt: issuedAt,
+      marketingOptIn: true,
+      pointsBalance: 3820,
+      tier: "gold",
+    })
+    .onConflictDoUpdate({
+      target: customerMembers.id,
+      set: {
+        email: "budi@example.com",
+        passwordHash: customerPasswordHash,
+        updatedAt: issuedAt,
+      },
+    });
+  await db
+    .insert(customerPointEvents)
+    .values([
+      { id: "cpe_welcome_budi", memberId: demoMemberId, kind: "bonus", points: 250, note: "Bonus selamat datang Wanna Rewards" },
+      { id: "cpe_earn_budi_001", memberId: demoMemberId, kind: "earn", points: 145, note: "Poin belanja Paket Keluarga" },
+      { id: "cpe_redeem_budi_001", memberId: demoMemberId, kind: "redeem", points: -500, note: "Tukar voucher Hakau" },
+    ])
+    .onConflictDoNothing();
+  await db
+    .insert(customerRewards)
+    .values([
+      { id: "reward_hakau_free", name: "Gratis Hakau Udang", category: "gratis", pointsCost: 500, description: "Tukar poin untuk 1 porsi Hakau Udang." },
+      { id: "reward_disc_20k", name: "Voucher Rp20.000", category: "voucher", pointsCost: 900, description: "Potongan belanja minimal Rp80.000." },
+      { id: "reward_paket_berdua", name: "Upgrade Paket Berdua", category: "paket", pointsCost: 1200, description: "Tambahan 2 minuman untuk Paket Berdua." },
+    ])
+    .onConflictDoNothing();
+  await db
+    .insert(customerVouchers)
+    .values({
+      id: "voucher_budi_hakau",
+      memberId: demoMemberId,
+      rewardId: "reward_hakau_free",
+      code: "WD-HAKAU-2481",
+      status: "active",
+      issuedAt,
+      expiresAt,
+    })
+    .onConflictDoNothing();
+  await db
+    .insert(customerPromos)
+    .values([
+      { id: "cpromo_weekend", title: "Weekend Dimsum Party", description: "Diskon 15% untuk paket keluarga setiap Sabtu-Minggu.", badge: "Weekend" },
+      { id: "cpromo_member_day", title: "Member Day", description: "Double poin setiap tanggal 12 khusus Wanna Rewards.", badge: "2x Poin" },
+      { id: "cpromo_birthday", title: "Birthday Treat", description: "Dimsum gratis di bulan ulang tahun member.", badge: "Birthday" },
     ])
     .onConflictDoNothing();
 

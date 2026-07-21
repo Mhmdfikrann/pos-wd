@@ -168,6 +168,52 @@ function reportTableData(label: string, report: OwnerReportSnapshot): TableData 
     ["Transaksi", String(report.summary.orderCount), null, `${report.summary.productsSold} item terjual`],
     ["Refund/Void", formatRupiah(report.summary.refundAmount + report.summary.voidAmount), "down", `Diskon ${formatRupiah(report.summary.discountAmount)}`],
   ];
+  const customerKpis: TableData["kpis"] = [
+    ["Total Member", String(report.customer.memberCount), null],
+    ["Aktif 30 Hari", String(report.customer.activeMembers30d), "up"],
+    ["Poin Issued/Redeemed", `${report.customer.pointsIssued.toLocaleString("id-ID")} / ${report.customer.pointsRedeemed.toLocaleString("id-ID")}`, null],
+  ];
+
+  if (/pelanggan|member|loyalty/.test(l) && !/program|campaign|reward|poin|group loyalty|grup pelanggan|grup harga|kustom|pengaturan/.test(l)) {
+    return {
+      kpis: customerKpis,
+      columns: [
+        { k: "n", label: "Member", w: "2fr", kind: "sub" },
+        { k: "hp", label: "No. HP", w: "1.3fr", kind: "mono" },
+        { k: "o", label: "Order", w: "0.8fr", align: "right", kind: "mono" },
+        { k: "s", label: "Total Belanja", w: "1.3fr", align: "right", kind: "mono" },
+        { k: "p", label: "Saldo Poin", w: "1fr", align: "right", kind: "mono" },
+        { k: "g", label: "Status", w: "1fr", kind: "badge" },
+      ],
+      rows: report.customer.topMembers.map((member) => ({
+        n: [member.fullName, `${member.orders} transaksi tertaut`],
+        hp: member.phone,
+        o: String(member.orders),
+        s: formatRupiah(member.spend),
+        p: member.pointsBalance.toLocaleString("id-ID"),
+        g: [member.orders >= 2 ? "Repeat" : "Aktif", member.orders >= 2 ? "gold" : "ok"],
+      })),
+      total: report.customer.topMembers.length,
+    };
+  }
+
+  if (/poin|reward|voucher|program loyalty|campaign/.test(l)) {
+    return {
+      kpis: customerKpis,
+      columns: [
+        { k: "m", label: "Metrik", w: "2fr", kind: "strong" },
+        { k: "v", label: "Nilai", w: "1fr", align: "right", kind: "mono" },
+        { k: "n", label: "Catatan", w: "2fr" },
+      ],
+      rows: [
+        { m: "Poin issued", v: report.customer.pointsIssued.toLocaleString("id-ID"), n: "Total poin earn/bonus periode ini" },
+        { m: "Poin redeemed", v: report.customer.pointsRedeemed.toLocaleString("id-ID"), n: "Total poin keluar untuk reward" },
+        { m: "Repeat member", v: String(report.customer.repeatMembers), n: "Member dengan minimal 2 transaksi tertaut" },
+        { m: "Member aktif", v: String(report.customer.activeMembers30d), n: "Aktif dalam 30 hari terakhir" },
+      ],
+      total: 4,
+    };
+  }
 
   if (/penjualan produk/.test(l)) {
     return {

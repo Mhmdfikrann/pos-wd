@@ -25,6 +25,8 @@ import {
   refunds,
   inventoryItems,
   outletStock,
+  customerMembers,
+  customerPointEvents,
 } from "@/db/schema";
 import { buildOwnerReport, type ReportsDb } from "@/lib/reports-data";
 
@@ -119,6 +121,8 @@ function seedOrder(input: {
   deliveryProvider?: "gofood" | "grabfood" | "shopeefood" | null;
   channelOrderName?: string | null;
   promoName?: string | null;
+  customerMemberId?: string | null;
+  customerPhone?: string | null;
   splitPayments?: Array<{ id: string; method: "cash" | "qris" | "transfer" | "ewallet" | "card"; amount: number; provider?: string | null; channelLabel?: string | null; referenceNo?: string | null; cashReceived?: number | null; changeAmount?: number | null }>;
   at: string;
   items?: Array<{ id: string; productId: string; name: string; sku: string; price: number; qty: number }>;
@@ -134,6 +138,8 @@ function seedOrder(input: {
       deliveryProvider: input.deliveryProvider ?? null,
       channelOrderName: input.channelOrderName ?? null,
       promoNameSnapshot: input.promoName ?? null,
+      customerMemberId: input.customerMemberId ?? null,
+      customerPhone: input.customerPhone ?? null,
       status: input.status ?? "paid",
       subtotal: input.subtotal ?? input.total,
       taxAmount: input.tax ?? 0,
@@ -189,8 +195,82 @@ function seedOrder(input: {
   db.insert(payments).values(paymentValues).run();
 }
 
+function seedCustomerMembers() {
+  db.insert(customerMembers)
+    .values([
+      {
+        id: "member_budi",
+        fullName: "Budi Santoso",
+        phone: "6281234567890",
+        email: "budi@example.com",
+        termsAcceptedAt: "2026-07-01T00:00:00.000Z",
+        privacyAcceptedAt: "2026-07-01T00:00:00.000Z",
+        pointsBalance: 66,
+        tier: "silver",
+      },
+      {
+        id: "member_ayu",
+        fullName: "Ayu Lestari",
+        phone: "628111222333",
+        email: "ayu@example.com",
+        termsAcceptedAt: "2026-07-01T00:00:00.000Z",
+        privacyAcceptedAt: "2026-07-01T00:00:00.000Z",
+        pointsBalance: 11,
+        tier: "silver",
+      },
+    ])
+    .run();
+}
+
+function seedCustomerPointEvents() {
+  db.insert(customerPointEvents)
+    .values([
+      {
+        id: "point_budi_order_cash",
+        memberId: "member_budi",
+        kind: "earn",
+        points: 111,
+        sourceOrderId: "order_cash",
+        note: "Belanja TRX-001",
+        createdAt: "2026-07-01T09:00:00.000Z",
+        updatedAt: "2026-07-01T09:00:00.000Z",
+      },
+      {
+        id: "point_budi_order_qris",
+        memberId: "member_budi",
+        kind: "earn",
+        points: 55,
+        sourceOrderId: "order_qris",
+        note: "Belanja TRX-002",
+        createdAt: "2026-07-02T10:00:00.000Z",
+        updatedAt: "2026-07-02T10:00:00.000Z",
+      },
+      {
+        id: "point_budi_redeem",
+        memberId: "member_budi",
+        kind: "redeem",
+        points: -100,
+        note: "Tukar Voucher Rp100.000",
+        createdAt: "2026-07-02T12:00:00.000Z",
+        updatedAt: "2026-07-02T12:00:00.000Z",
+      },
+      {
+        id: "point_ayu_order_old",
+        memberId: "member_ayu",
+        kind: "earn",
+        points: 11,
+        sourceOrderId: "order_outside_range",
+        note: "Di luar range",
+        createdAt: "2026-06-30T23:00:00.000Z",
+        updatedAt: "2026-06-30T23:00:00.000Z",
+      },
+    ])
+    .run();
+}
+
 function seedReportData() {
   seedBase();
+  seedCustomerMembers();
   seedOrder({
     id: "order_cash",
     no: "TRX-001",
@@ -199,6 +279,8 @@ function seedReportData() {
     tax: 11000,
     at: "2026-07-01T09:00:00.000Z",
     method: "cash",
+    customerMemberId: "member_budi",
+    customerPhone: "6281234567890",
     items: [{ id: "item_cash", productId: "prod_dimsum", name: "Dimsum Ayam", sku: "D-1", price: 50000, qty: 2 }],
   });
   seedOrder({
@@ -210,6 +292,8 @@ function seedReportData() {
     discount: 5000,
     at: "2026-07-02T10:00:00.000Z",
     method: "qris",
+    customerMemberId: "member_budi",
+    customerPhone: "6281234567890",
     items: [{ id: "item_qris", productId: "prod_hakau", name: "Hakau Udang", sku: "H-1", price: 60000, qty: 1 }],
   });
   seedOrder({
@@ -261,6 +345,7 @@ function seedReportData() {
       updatedAt: "2026-07-01T13:00:00.000Z",
     })
     .run();
+  seedCustomerPointEvents();
 }
 
 beforeEach(() => {
@@ -378,6 +463,28 @@ describe("buildOwnerReport", () => {
       ["void", 30000, "TRX-003"],
       ["discount", 5000, "TRX-002"],
       ["expense", 15000, "Beli es batu"],
+    ]);
+  });
+
+  it("includes customer member, activity, repeat, and point totals for owner reporting hooks", () => {
+    const report = buildOwnerReport(db, reportInput);
+
+    expect(report.customer).toMatchObject({
+      memberCount: 2,
+      activeMembers30d: 1,
+      repeatMembers: 1,
+      pointsIssued: 166,
+      pointsRedeemed: 100,
+    });
+    expect(report.customer.topMembers).toEqual([
+      {
+        memberId: "member_budi",
+        fullName: "Budi Santoso",
+        phone: "6281234567890",
+        orders: 2,
+        spend: 166000,
+        pointsBalance: 66,
+      },
     ]);
   });
 

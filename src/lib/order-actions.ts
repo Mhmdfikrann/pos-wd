@@ -55,6 +55,9 @@ export interface CheckoutRequest {
   orderNote?: string | null;
   taxPercent: number;
   promoId?: string | null;
+  customerMemberId?: string | null;
+  customerMemberPhone?: string | null;
+  voucherCode?: string | null;
   payment?: {
     method: PaymentMethod;
     cashReceived: number;
@@ -94,6 +97,9 @@ export async function actionCheckout(
       orderNote: req.orderNote,
       taxPercent: req.taxPercent,
       promoId: req.promoId,
+      customerMemberId: req.customerMemberId,
+      customerMemberPhone: req.customerMemberPhone,
+      voucherCode: req.voucherCode,
       payment: req.payment,
       payments: req.payments,
       idempotencyKey: req.idempotencyKey,
@@ -166,7 +172,7 @@ export async function actionCheckout(
     }
 
     // User-friendly validation messages from the service pass through.
-    if (/kosong|shift terbuka|tidak ditemukan|tidak tersedia|tunai kurang|rupiah|Kuantitas|Nomor meja|Nama pemesan|Provider delivery|marketplace|Promo|Order tersimpan|payment|Reference|EDC|Transfer|Tunai/i.test(msg)) {
+    if (/kosong|shift terbuka|tidak ditemukan|tidak tersedia|tunai kurang|rupiah|Kuantitas|Nomor meja|Nama pemesan|Provider delivery|marketplace|Promo|Order tersimpan|payment|Reference|EDC|Transfer|Tunai|Member customer|Nomor HP member|Voucher/i.test(msg)) {
       return { ok: false, error: msg };
     }
     console.error("[order-action] checkout failed:", err);

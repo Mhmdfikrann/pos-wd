@@ -64,6 +64,27 @@
       "when": 1784612639201,
       "tag": "0008_rapid_pestilence",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1784627807009,
+      "tag": "0009_cold_sleeper",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1784629000000,
+      "tag": "0010_lca_customer_order_link",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1784630000000,
+      "tag": "0011_customer_email_password",
+      "breakpoints": true
     }
   ]
 }

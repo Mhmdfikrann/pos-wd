@@ -10,6 +10,8 @@ import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import {
   cashMovements,
   categories,
+  customerMembers,
+  customerPointEvents,
   inventoryItems,
   orderItems,
   orders,
@@ -40,6 +42,24 @@ export interface OwnerReportSummary {
   voidAmount: number;
   discountAmount: number;
   expenseAmount: number;
+}
+
+export interface CustomerReportTopMemberRow {
+  memberId: string;
+  fullName: string;
+  phone: string;
+  orders: number;
+  spend: number;
+  pointsBalance: number;
+}
+
+export interface CustomerReportSummary {
+  memberCount: number;
+  activeMembers30d: number;
+  repeatMembers: number;
+  pointsIssued: number;
+  pointsRedeemed: number;
+  topMembers: CustomerReportTopMemberRow[];
 }
 
 export interface DailySalesRow {
@@ -150,6 +170,7 @@ export interface OwnerReportSnapshot {
     to: string;
   };
   summary: OwnerReportSummary;
+  customer: CustomerReportSummary;
   dailySales: DailySalesRow[];
   paymentMethods: PaymentMethodReportRow[];
   topProducts: ProductSalesReportRow[];
@@ -194,6 +215,8 @@ export function buildOwnerReport(db: ReportsDb, input: OwnerReportInput): OwnerR
       outletName: outlets.name,
       cashierId: orders.cashierId,
       cashierName: users.name,
+      customerMemberId: orders.customerMemberId,
+      customerPhone: orders.customerPhone,
       orderType: orders.orderType,
       deliveryProvider: orders.deliveryProvider,
       channelOrderName: orders.channelOrderName,
@@ -359,6 +382,15 @@ export function buildOwnerReport(db: ReportsDb, input: OwnerReportInput): OwnerR
   };
 
   const orderById = new Map(orderRows.map((order) => [order.id, order]));
+  const memberRows = db
+    .select({
+      id: customerMembers.id,
+      fullName: customerMembers.fullName,
+      phone: customerMembers.phone,
+      pointsBalance: customerMembers.pointsBalance,
+    })
+    .from(customerMembers)
+    .all();
 
   const productSales = aggregateProducts(itemRows);
   const categorySales = aggregateCategories(itemRows);
@@ -386,6 +418,16 @@ export function buildOwnerReport(db: ReportsDb, input: OwnerReportInput): OwnerR
   return {
     range: { from: input.from, to: input.to },
     summary,
+    customer: buildCustomerReport({
+      memberRows,
+      activeOrders,
+      to: input.to,
+      pointRows: selectScopedCustomerPointRows(db, {
+        memberIds: uniqueMemberIds(activeOrders),
+        from: input.from,
+        to: input.to,
+      }),
+    }),
     dailySales,
     paymentMethods,
     topProducts: productSales.slice(0, 5),
@@ -424,6 +466,14 @@ function emptyReport(input: OwnerReportInput): OwnerReportSnapshot {
       discountAmount: 0,
       expenseAmount: 0,
     },
+    customer: {
+      memberCount: 0,
+      activeMembers30d: 0,
+      repeatMembers: 0,
+      pointsIssued: 0,
+      pointsRedeemed: 0,
+      topMembers: [],
+    },
     dailySales: [],
     paymentMethods: [],
     topProducts: [],
@@ -446,6 +496,85 @@ function isSalesOrder(status: OrderStatus): boolean {
 
 function sum<T>(rows: T[], value: (row: T) => number | null | undefined): number {
   return rows.reduce((total, row) => total + (value(row) ?? 0), 0);
+}
+
+function uniqueMemberIds(ordersInRange: Array<{ customerMemberId?: string | null }>): string[] {
+  return [...new Set(ordersInRange.map((order) => order.customerMemberId).filter((id): id is string => Boolean(id)))];
+}
+
+function selectScopedCustomerPointRows(
+  db: ReportsDb,
+  input: { memberIds: string[]; from: string; to: string },
+): Array<{ memberId: string; kind: string; points: number; createdAt: string }> {
+  if (input.memberIds.length === 0) return [];
+  return db
+    .select({
+      memberId: customerPointEvents.memberId,
+      kind: customerPointEvents.kind,
+      points: customerPointEvents.points,
+      createdAt: customerPointEvents.createdAt,
+    })
+    .from(customerPointEvents)
+    .where(
+      and(
+        inArray(customerPointEvents.memberId, input.memberIds),
+        gte(customerPointEvents.createdAt, input.from),
+        lt(customerPointEvents.createdAt, input.to),
+      ),
+    )
+    .all();
+}
+
+function buildCustomerReport(input: {
+  memberRows: Array<{ id: string; fullName: string; phone: string; pointsBalance: number }>;
+  activeOrders: Array<{ customerMemberId?: string | null; total: number; createdAt: string }>;
+  pointRows: Array<{ memberId: string; points: number; createdAt: string }>;
+  to: string;
+}): CustomerReportSummary {
+  const orderStats = new Map<string, { orders: number; spend: number }>();
+  for (const order of input.activeOrders) {
+    if (!order.customerMemberId) continue;
+    const current = orderStats.get(order.customerMemberId) ?? { orders: 0, spend: 0 };
+    current.orders += 1;
+    current.spend += order.total;
+    orderStats.set(order.customerMemberId, current);
+  }
+
+  const activeSince = new Date(input.to);
+  activeSince.setUTCDate(activeSince.getUTCDate() - 30);
+  const activeSinceIso = activeSince.toISOString();
+  const activeMembers30d = new Set(
+    input.activeOrders
+      .filter((order) => order.customerMemberId && order.createdAt >= activeSinceIso)
+      .map((order) => order.customerMemberId),
+  ).size;
+
+  const memberById = new Map(input.memberRows.map((member) => [member.id, member]));
+  const topMembers = [...orderStats.entries()]
+    .map(([memberId, row]) => {
+      const member = memberById.get(memberId);
+      if (!member) return null;
+      return {
+        memberId,
+        fullName: member.fullName,
+        phone: member.phone,
+        orders: row.orders,
+        spend: row.spend,
+        pointsBalance: member.pointsBalance,
+      } satisfies CustomerReportTopMemberRow;
+    })
+    .filter((row): row is CustomerReportTopMemberRow => Boolean(row))
+    .sort((a, b) => b.spend - a.spend || b.orders - a.orders || a.fullName.localeCompare(b.fullName))
+    .slice(0, 5);
+
+  return {
+    memberCount: input.memberRows.length,
+    activeMembers30d,
+    repeatMembers: [...orderStats.values()].filter((row) => row.orders >= 2).length,
+    pointsIssued: sum(input.pointRows, (row) => (row.points > 0 ? row.points : 0)),
+    pointsRedeemed: sum(input.pointRows, (row) => (row.points < 0 ? Math.abs(row.points) : 0)),
+    topMembers,
+  };
 }
 
 function aggregateDaily(
