@@ -28,8 +28,8 @@ export const NAV: NavItem[] = [
     ic: "inventory",
     label: "Inventori",
     children: [
-      { label: "Kelola Stok", children: [{ label: "Daftar Stok" }, { label: "Faktur Pembelian" }, { label: "Produksi Stok" }, { label: "Stok Opname" }, { label: "Stok Terbuang" }] },
-      { label: "Pembelian Stok", children: [{ label: "Daftar Pemasok" }, { label: "Pemesanan Stok" }, { label: "Pengiriman Pembelian" }, { label: "Permintaan Barang" }] },
+      { label: "Kelola Stok", children: [{ label: "Daftar Stok" }, { label: "Produksi Stok" }, { label: "Stok Opname" }, { label: "Stok Terbuang" }] },
+      { label: "Pembelian Stok", children: [{ label: "Permintaan Barang" }, { label: "Pemesanan Stok" }, { label: "Faktur Pembelian" }, { label: "Pembayaran Faktur" }, { label: "Daftar Pemasok" }, { label: "Pengiriman Pembelian" }] },
       { label: "Mutasi Antar Outlet", children: [{ label: "Permintaan Stok" }, { label: "Kirim Stok" }, { label: "Terima Mutasi Stok" }, { label: "Stok Transit" }] },
       { label: "Retur", children: [{ label: "Retur Pembelian" }, { label: "Rekonsiliasi Retur" }] },
       { label: "Daftar Bahan Baku" },
@@ -40,7 +40,7 @@ export const NAV: NavItem[] = [
     label: "Produk",
     children: [
       { label: "Buku Menu" }, { label: "Daftar Layanan" }, { label: "Daftar Kategori" }, { label: "Produk Ekstra" },
-      { label: "Daftar Departemen" }, { label: "Produk Paket" }, { label: "Master Resep" }, { label: "Cetak Barcode" },
+      { label: "Daftar Departemen" }, { label: "Produk Paket" }, { label: "Harga Ojek Online" }, { label: "Master Resep" }, { label: "Cetak Barcode" },
       { label: "Harga Berdasarkan Waktu" },
     ],
   },

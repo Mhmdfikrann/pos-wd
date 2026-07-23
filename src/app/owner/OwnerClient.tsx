@@ -12,6 +12,9 @@ import { FormPage } from "@/components/owner/FormPage";
 import { BoardPage } from "@/components/owner/BoardPage";
 import { KasirPage } from "@/components/owner/KasirPage";
 import { CatalogManager, CATALOG_LABELS } from "@/components/owner/CatalogManager";
+import { OnlinePricingManager } from "@/components/owner/OnlinePricingManager";
+import { RawMaterialManager } from "@/components/owner/RawMaterialManager";
+import { PurchaseManager, PURCHASE_LABELS } from "@/components/owner/PurchaseManager";
 import { defaultDateRange, type DateRangeValue } from "@/components/DateRangeFilter";
 import { actionGetOwnerReportForRange } from "@/lib/report-actions";
 import { RoleProfileMenu } from "@/components/RoleProfileMenu";
@@ -36,7 +39,13 @@ function PageEl({
 }) {
   if (active === "Dashboard Penjualan") return null;
   let el: React.ReactNode;
-  if (CATALOG_LABELS.includes(active)) {
+  if (active === "Harga Ojek Online") {
+    el = <OnlinePricingManager />;
+  } else if (active === "Daftar Bahan Baku") {
+    el = <RawMaterialManager />;
+  } else if (PURCHASE_LABELS.includes(active)) {
+    el = <PurchaseManager key={active} label={active} />;
+  } else if (CATALOG_LABELS.includes(active)) {
     // Bespoke, DB-backed catalog manager (Phase 3) instead of the mock table.
     // key={active} remounts it per label so it opens on the right tab.
     el = <CatalogManager key={active} label={active} />;

@@ -19,11 +19,15 @@ export function Toolbar({
   filters,
   query,
   onQuery,
+  onExportExcel,
+  onExportPdf,
 }: {
   placeholder?: string;
   filters?: string[];
   query: string;
   onQuery: (query: string) => void;
+  onExportExcel?: () => void;
+  onExportPdf?: () => void;
 }) {
   const btnStyle = {
     height: "40px",
@@ -70,10 +74,18 @@ export function Toolbar({
         </button>
       ))}
       <div style={{ flex: 1 }} />
-      <button style={btnStyle}>
-        {ic("download", 14, "currentColor", 2)}
-        Export
-      </button>
+      {onExportExcel ? (
+        <button style={btnStyle} onClick={onExportExcel}>
+          {ic("download", 14, "currentColor", 2)}
+          Export Excel
+        </button>
+      ) : null}
+      {onExportPdf ? (
+        <button style={btnStyle} onClick={onExportPdf}>
+          {ic("download", 14, "currentColor", 2)}
+          Export PDF
+        </button>
+      ) : null}
     </div>
   );
 }
@@ -219,6 +231,90 @@ export function TablePage({ label, crumbPath }: { label: string; crumbPath?: str
   const filtered = useMemo(() => filterTableData(d, query), [d, query]);
   const actionLabel = actionFor(label);
 
+  function handleExportExcel() {
+    const headers = filtered.columns.map((c) => c.label);
+    const rows = filtered.rows.map((r) =>
+      filtered.columns.map((c) => cellText(r[c.k]))
+    );
+    const headerLine = headers.join(",");
+    const rowLines = rows.map((r) => r.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(","));
+    const csv = [headerLine, ...rowLines].join("\r\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `export-${label.toLowerCase().replace(/\s+/g, "-")}-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function handleExportPdf() {
+    const headers = filtered.columns.map((c) => c.label);
+    const rows = filtered.rows.map((r) =>
+      filtered.columns.map((c) => cellText(r[c.k]))
+    );
+
+    const printWin = window.open("", "_blank");
+    if (!printWin) return;
+
+    printWin.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Export PDF - ${label}</title>
+        <style>
+          body { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; padding: 24px; color: #23201F; background: #fff; }
+          .header { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid #A91F34; padding-bottom: 12px; margin-bottom: 20px; }
+          .brand { font-size: 20px; font-weight: 800; color: #A91F34; letter-spacing: -0.5px; }
+          .subtitle { font-size: 13px; color: #666; margin-top: 2px; }
+          .meta { text-align: right; font-size: 12px; color: #666; }
+          table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+          th { background: #FFF9F2; color: #A91F34; font-size: 11px; font-weight: 800; text-transform: uppercase; padding: 10px; border: 1px solid rgba(35,32,31,0.14); text-align: left; }
+          td { font-size: 12px; padding: 9px 10px; border: 1px solid rgba(35,32,31,0.12); }
+          tr:nth-child(even) { background: #FAFAFA; }
+          @media print { body { padding: 0; } }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div>
+            <div class="brand">WANNA DIMSUM POS</div>
+            <div class="subtitle">Laporan Data ${label}</div>
+          </div>
+          <div class="meta">
+            Tanggal: <strong>${new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}</strong><br/>
+            Total Data: <strong>${rows.length} Items</strong>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              ${headers.map((h) => `<th>${h}</th>`).join("")}
+            </tr>
+          </thead>
+          <tbody>
+            ${rows
+              .map(
+                (r) => `
+              <tr>
+                ${r.map((cell) => `<td>${cell}</td>`).join("")}
+              </tr>
+            `
+              )
+              .join("")}
+          </tbody>
+        </table>
+        <script>
+          window.onload = function() {
+            window.print();
+          };
+        </script>
+      </body>
+      </html>
+    `);
+    printWin.document.close();
+  }
+
   return (
     <div>
       <PageHead label={label} crumbPath={crumbPath} actionLabel={actionLabel} subtitle={d.subtitle} onAction={actionLabel ? () => setAddOpen(true) : undefined} />
@@ -234,7 +330,7 @@ export function TablePage({ label, crumbPath }: { label: string; crumbPath?: str
           ))}
         </div>
       ) : null}
-      <Toolbar placeholder={`Cari ${label.toLowerCase()}…`} filters={d.filters} query={query} onQuery={setQuery} />
+      <Toolbar placeholder={`Cari ${label.toLowerCase()}…`} filters={d.filters} query={query} onQuery={setQuery} onExportExcel={handleExportExcel} onExportPdf={handleExportPdf} />
       <TableCard d={filtered} />
       {addOpen ? (
         <div

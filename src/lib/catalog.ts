@@ -18,7 +18,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { and, asc, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { categories, products, productVariants, addons } from "@/db/schema";
+import { categories, products, productVariants, addons, inventoryItems, recipes, recipeItems, packageItems, productAddons } from "@/db/schema";
 
 // ===== Types =====
 export interface CatalogProduct {
@@ -28,6 +28,12 @@ export interface CatalogProduct {
   sku: string;
   price: number;
   costPrice: number;
+  unit: string;
+  type: "single" | "package";
+  minOrder: number;
+  isFavorite: boolean;
+  showInBar: boolean;
+  onlinePrices: Record<string, number> | null;
   kitchenStation: string | null;
   photoUrl: string | null;
   available: boolean;
@@ -114,6 +120,12 @@ export async function createProduct(input: {
   sku: string;
   price: number;
   costPrice?: number;
+  unit?: string;
+  type?: "single" | "package";
+  minOrder?: number;
+  isFavorite?: boolean;
+  showInBar?: boolean;
+  onlinePrices?: Record<string, number> | null;
   kitchenStation?: string | null;
   photoUrl?: string | null;
   available?: boolean;
@@ -126,6 +138,12 @@ export async function createProduct(input: {
     sku: input.sku,
     price: input.price,
     costPrice: input.costPrice ?? 0,
+    unit: input.unit ?? "porsi",
+    type: input.type ?? "single",
+    minOrder: input.minOrder ?? 1,
+    isFavorite: input.isFavorite ?? false,
+    showInBar: input.showInBar ?? false,
+    onlinePrices: input.onlinePrices ? JSON.stringify(input.onlinePrices) : null,
     kitchenStation: input.kitchenStation ?? null,
     photoUrl: input.photoUrl ?? null,
     available: input.available ?? true,
@@ -141,15 +159,26 @@ export async function updateProduct(
     sku: string;
     price: number;
     costPrice: number;
+    unit: string;
+    type: "single" | "package";
+    minOrder: number;
+    isFavorite: boolean;
+    showInBar: boolean;
+    onlinePrices: Record<string, number> | null;
     kitchenStation: string | null;
     photoUrl: string | null;
     available: boolean;
     active: boolean;
   }>,
 ): Promise<void> {
+  const { onlinePrices, ...restPatch } = patch;
+  const updateData: Record<string, unknown> = { ...restPatch, updatedAt: new Date().toISOString() };
+  if (onlinePrices !== undefined) {
+    updateData.onlinePrices = onlinePrices ? JSON.stringify(onlinePrices) : null;
+  }
   await db
     .update(products)
-    .set({ ...patch, updatedAt: new Date().toISOString() })
+    .set(updateData)
     .where(eq(products.id, id));
 }
 
@@ -164,6 +193,15 @@ export async function deactivateProduct(id: string): Promise<void> {
 }
 
 function mapProduct(row: typeof products.$inferSelect): CatalogProduct {
+  let parsedOnlinePrices: Record<string, number> | null = null;
+  if (row.onlinePrices) {
+    try {
+      parsedOnlinePrices = typeof row.onlinePrices === "string" ? JSON.parse(row.onlinePrices) : row.onlinePrices;
+    } catch {
+      parsedOnlinePrices = null;
+    }
+  }
+
   return {
     id: row.id,
     categoryId: row.categoryId,
@@ -171,6 +209,12 @@ function mapProduct(row: typeof products.$inferSelect): CatalogProduct {
     sku: row.sku,
     price: row.price,
     costPrice: row.costPrice,
+    unit: row.unit,
+    type: row.type as "single" | "package",
+    minOrder: row.minOrder ?? 1,
+    isFavorite: row.isFavorite ?? false,
+    showInBar: row.showInBar ?? false,
+    onlinePrices: parsedOnlinePrices,
     kitchenStation: row.kitchenStation,
     photoUrl: row.photoUrl,
     available: row.available,
@@ -228,19 +272,172 @@ export async function listAddons(includeInactive = false) {
     .all();
 }
 
-export async function createAddon(input: { name: string; price?: number }): Promise<string> {
+export async function createAddon(input: {
+  name: string;
+  price?: number;
+  isMandatory?: boolean;
+  selectMode?: "single" | "multiple";
+}): Promise<string> {
   const id = randomUUID();
-  await db.insert(addons).values({ id, name: input.name, price: input.price ?? 0 });
+  await db.insert(addons).values({
+    id,
+    name: input.name,
+    price: input.price ?? 0,
+    isMandatory: input.isMandatory ?? false,
+    selectMode: input.selectMode ?? "multiple",
+  });
   return id;
 }
 
 export async function updateAddon(
   id: string,
-  patch: Partial<{ name: string; price: number; active: boolean }>,
+  patch: Partial<{
+    name: string;
+    price: number;
+    isMandatory: boolean;
+    selectMode: "single" | "multiple";
+    active: boolean;
+  }>,
 ): Promise<void> {
   await db.update(addons).set(patch).where(eq(addons.id, id));
 }
 
 export async function deactivateAddon(id: string): Promise<void> {
   await updateAddon(id, { active: false });
+}
+
+export async function getProductAddons(productId: string): Promise<string[]> {
+  const rows = await db
+    .select({ addonId: productAddons.addonId })
+    .from(productAddons)
+    .where(eq(productAddons.productId, productId))
+    .all();
+  return rows.map((r) => r.addonId);
+}
+
+export async function saveProductAddons(productId: string, addonIds: string[]): Promise<void> {
+  await db.delete(productAddons).where(eq(productAddons.productId, productId));
+  for (const addonId of addonIds) {
+    if (!addonId) continue;
+    const id = randomUUID();
+    await db.insert(productAddons).values({ id, productId, addonId });
+  }
+}
+
+// ===== Inventory Items & Recipes =====
+export interface InventoryItemSimple {
+  id: string;
+  name: string;
+  sku: string;
+  unit: string;
+  cost: number;
+}
+
+export interface RecipeItemSimple {
+  inventoryItemId: string;
+  quantity: number;
+}
+
+export async function listInventoryItemsSimple(): Promise<InventoryItemSimple[]> {
+  return db
+    .select({
+      id: inventoryItems.id,
+      name: inventoryItems.name,
+      sku: inventoryItems.sku,
+      unit: inventoryItems.unit,
+      cost: inventoryItems.cost,
+    })
+    .from(inventoryItems)
+    .where(eq(inventoryItems.active, true))
+    .orderBy(asc(inventoryItems.name))
+    .all();
+}
+
+export async function getProductRecipe(productId: string): Promise<RecipeItemSimple[]> {
+  const recipe = await db
+    .select()
+    .from(recipes)
+    .where(and(eq(recipes.productId, productId), eq(recipes.active, true)))
+    .get();
+
+  if (!recipe) return [];
+
+  return db
+    .select({
+      inventoryItemId: recipeItems.inventoryItemId,
+      quantity: recipeItems.quantity,
+    })
+    .from(recipeItems)
+    .where(eq(recipeItems.recipeId, recipe.id))
+    .all();
+}
+
+export async function saveProductRecipe(
+  productId: string,
+  items: { inventoryItemId: string; quantity: number }[],
+): Promise<void> {
+  let recipe = await db
+    .select()
+    .from(recipes)
+    .where(and(eq(recipes.productId, productId), eq(recipes.active, true)))
+    .get();
+
+  if (!recipe) {
+    const recipeId = `recipe_${productId}_v1`;
+    await db.insert(recipes).values({
+      id: recipeId,
+      productId,
+      version: 1,
+      active: true,
+    });
+    recipe = { id: recipeId, productId, variantId: null, version: 1, active: true, createdAt: "", updatedAt: "" };
+  } else {
+    await db.delete(recipeItems).where(eq(recipeItems.recipeId, recipe.id));
+  }
+
+  for (const item of items) {
+    if (item.quantity <= 0) continue;
+    const id = randomUUID();
+    await db.insert(recipeItems).values({
+      id,
+      recipeId: recipe.id,
+      inventoryItemId: item.inventoryItemId,
+      quantity: item.quantity,
+    });
+  }
+}
+
+// ===== Package Items =====
+export interface PackageItemSimple {
+  itemProductId: string;
+  quantity: number;
+}
+
+export async function getPackageItems(packageProductId: string): Promise<PackageItemSimple[]> {
+  return db
+    .select({
+      itemProductId: packageItems.itemProductId,
+      quantity: packageItems.quantity,
+    })
+    .from(packageItems)
+    .where(eq(packageItems.packageProductId, packageProductId))
+    .all();
+}
+
+export async function savePackageItems(
+  packageProductId: string,
+  items: { itemProductId: string; quantity: number }[],
+): Promise<void> {
+  await db.delete(packageItems).where(eq(packageItems.packageProductId, packageProductId));
+
+  for (const item of items) {
+    if (item.quantity <= 0 || !item.itemProductId) continue;
+    const id = randomUUID();
+    await db.insert(packageItems).values({
+      id,
+      packageProductId,
+      itemProductId: item.itemProductId,
+      quantity: item.quantity,
+    });
+  }
 }

@@ -213,6 +213,18 @@ export const products = sqliteTable(
     price: integer("price").notNull(),
     /** integer rupiah */
     costPrice: integer("cost_price").notNull().default(0),
+    unit: text("unit").notNull().default("porsi"),
+    type: text("type", { enum: ["single", "package"] })
+      .notNull()
+      .default("single"),
+    minOrder: integer("min_order").notNull().default(1),
+    isFavorite: integer("is_favorite", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    showInBar: integer("show_in_bar", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    onlinePrices: text("online_prices", { mode: "json" }),
     kitchenStation: text("kitchen_station"),
     photoUrl: text("photo_url"),
     available: integer("available", { mode: "boolean" })
@@ -236,12 +248,39 @@ export const productVariants = sqliteTable("product_variants", {
   active: integer("active", { mode: "boolean" }).notNull().default(true),
 });
 
+export const packageItems = sqliteTable("package_items", {
+  id: text("id").primaryKey(),
+  packageProductId: text("package_product_id")
+    .notNull()
+    .references(() => products.id),
+  itemProductId: text("item_product_id")
+    .notNull()
+    .references(() => products.id),
+  quantity: integer("quantity").notNull().default(1),
+});
+
 export const addons = sqliteTable("addons", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   /** integer rupiah */
   price: integer("price").notNull().default(0),
+  isMandatory: integer("is_mandatory", { mode: "boolean" })
+    .notNull()
+    .default(false),
+  selectMode: text("select_mode", { enum: ["single", "multiple"] })
+    .notNull()
+    .default("multiple"),
   active: integer("active", { mode: "boolean" }).notNull().default(true),
+});
+
+export const productAddons = sqliteTable("product_addons", {
+  id: text("id").primaryKey(),
+  productId: text("product_id")
+    .notNull()
+    .references(() => products.id),
+  addonId: text("addon_id")
+    .notNull()
+    .references(() => addons.id),
 });
 
 // ===== Customers =====

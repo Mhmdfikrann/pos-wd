@@ -13,6 +13,7 @@
  * Run: `npm run db:seed`  (idempotent — safe to run repeatedly)
  */
 import { hashPassword } from "better-auth/crypto";
+import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import { db } from "./index";
 import {
   roles,
@@ -90,6 +91,9 @@ const USERS = [
 const OUTLET_ID = "outlet_kemang";
 
 async function main() {
+  console.log("Running database migrations...");
+  migrate(db, { migrationsFolder: "./drizzle" });
+
   console.log("Seeding roles...");
   for (const r of ROLES) {
     await db.insert(roles).values(r).onConflictDoNothing();
