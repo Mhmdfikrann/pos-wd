@@ -33,9 +33,22 @@ import {
   Plus,
   Filter,
   Download,
+  Printer,
+  Mail,
+  FilePlus,
+  Ban,
+  CheckCircle2,
+  Upload,
+  Trash2,
+  Pencil,
+  Eye,
+  PackageCheck,
+  Info,
+  X,
+  Check,
 } from "lucide-react";
 
-/** Every ICON key from the mockup, mapped to the closest lucide-react icon. */
+/** Every ICON key from the mockup, mapped to official lucide-react icons (https://lucide.dev/icons). */
 const ICON_MAP = {
   dashboard: LayoutDashboard,
   cashier: Calculator,
@@ -73,17 +86,30 @@ const ICON_MAP = {
   plus: Plus,
   filter: Filter,
   download: Download,
+  printer: Printer,
+  mail: Mail,
+  filePlus: FilePlus,
+  ban: Ban,
+  checkCircle: CheckCircle2,
+  upload: Upload,
+  trash: Trash2,
+  edit: Pencil,
+  eye: Eye,
+  packageCheck: PackageCheck,
+  info: Info,
+  x: X,
+  check: Check,
 } satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof ICON_MAP;
 
-/** Port of the mockup's `this.ic(name, size, color, sw)` helper. */
+/** Port of the mockup's `this.ic(name, size, color, sw)` helper backed by official Lucide React icons. */
 export function ic(
   name: IconName,
   size = 18,
   color = "currentColor",
   sw = 2,
 ) {
-  const Cmp = ICON_MAP[name];
+  const Cmp = ICON_MAP[name] || Info;
   return <Cmp size={size} color={color} strokeWidth={sw} />;
 }

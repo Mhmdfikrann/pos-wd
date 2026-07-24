@@ -28,11 +28,12 @@ export const NAV: NavItem[] = [
     ic: "inventory",
     label: "Inventori",
     children: [
-      { label: "Kelola Stok", children: [{ label: "Daftar Stok" }, { label: "Produksi Stok" }, { label: "Stok Opname" }, { label: "Stok Terbuang" }] },
+      { label: "Daftar Bahan Baku" },
+      { label: "Kelola Stok", children: [{ label: "Daftar Stok" }, { label: "Stok Opname" }, { label: "Stok Terbuang" }] },
+      { label: "Produksi Stok", children: [{ label: "Daftar Produksi Stok" }, { label: "Acuan Produksi Stok" }] },
       { label: "Pembelian Stok", children: [{ label: "Permintaan Barang" }, { label: "Pemesanan Stok" }, { label: "Faktur Pembelian" }, { label: "Pembayaran Faktur" }, { label: "Daftar Pemasok" }, { label: "Pengiriman Pembelian" }] },
       { label: "Mutasi Antar Outlet", children: [{ label: "Permintaan Stok" }, { label: "Kirim Stok" }, { label: "Terima Mutasi Stok" }, { label: "Stok Transit" }] },
       { label: "Retur", children: [{ label: "Retur Pembelian" }, { label: "Rekonsiliasi Retur" }] },
-      { label: "Daftar Bahan Baku" },
     ],
   },
   {

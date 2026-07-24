@@ -377,9 +377,10 @@ export function OnlinePricingManager() {
                   </div>
                   <div style={{ textAlign: "right" }}>
                     <button
+                      type="button"
                       onClick={() => openEditModal(ch)}
                       style={{
-                        height: 32,
+                        height: 34,
                         padding: "0 14px",
                         borderRadius: 8,
                         border: "1px solid rgba(35,32,31,0.14)",
@@ -395,7 +396,8 @@ export function OnlinePricingManager() {
                       }}
                       title="Edit Pengaturan Channel & Harga"
                     >
-                      ✏️ Edit
+                      {ic("edit", 14, "currentColor", 2)}
+                      Edit
                     </button>
                   </div>
                 </div>
@@ -484,7 +486,6 @@ export function OnlinePricingManager() {
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: 12, fontWeight: 700, display: "block", marginBottom: 4, color: "rgba(35,32,31,0.7)" }}>Status di User Kasir</label>
                   <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, fontWeight: 700, cursor: "pointer", height: 38 }}>
                     <input
                       type="checkbox"
@@ -619,10 +620,10 @@ export function OnlinePricingManager() {
                                     delete next[prodId];
                                     setFormProducts(next);
                                   }}
-                                  style={{ border: "none", background: "none", cursor: "pointer", fontSize: 15 }}
+                                  style={{ border: "none", background: "none", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
                                   title="Hapus dari channel ini"
                                 >
-                                  🗑️
+                                  {ic("trash", 15, "#B83636", 2)}
                                 </button>
                               </div>
                             </div>

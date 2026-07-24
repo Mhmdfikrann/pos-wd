@@ -144,45 +144,49 @@ export function TableCard({ d }: { d: TableData }) {
   const tmpl = cols.map((c) => c.w || "1fr").join(" ");
   return (
     <div className="wd-responsive-table" style={{ background: "#fff", border: "1px solid rgba(35,32,31,0.06)", borderRadius: "14px", overflow: "hidden" }}>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: tmpl,
-          gap: "10px",
-          padding: "11px 20px",
-          background: "#FAFAFA",
-          fontSize: "11px",
-          fontWeight: 700,
-          letterSpacing: "0.04em",
-          textTransform: "uppercase",
-          color: "rgba(35,32,31,0.42)",
-        }}
-      >
-        {cols.map((c, i) => (
-          <div key={i} style={{ textAlign: c.align || "left" }}>
-            {c.label}
-          </div>
-        ))}
-      </div>
-      <div>
-        {d.rows.map((r, ri) => (
+      <div style={{ overflowX: "auto" }} className="wd-scroll">
+        <div style={{ minWidth: "1050px" }}>
           <div
-            key={ri}
             style={{
               display: "grid",
               gridTemplateColumns: tmpl,
               gap: "10px",
-              padding: "13px 20px",
-              fontSize: "13.5px",
-              borderTop: "1px solid rgba(35,32,31,0.05)",
-              alignItems: "center",
+              padding: "11px 20px",
+              background: "#FAFAFA",
+              fontSize: "11px",
+              fontWeight: 700,
+              letterSpacing: "0.04em",
+              textTransform: "uppercase",
+              color: "rgba(35,32,31,0.42)",
             }}
           >
-            {cols.map((c, ci) => (
-              <Cell key={ci} col={c} value={r[c.k]} />
+            {cols.map((c, i) => (
+              <div key={i} style={{ textAlign: c.align || "left" }}>
+                {c.label}
+              </div>
             ))}
           </div>
-        ))}
+          <div>
+            {d.rows.map((r, ri) => (
+              <div
+                key={ri}
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: tmpl,
+                  gap: "10px",
+                  padding: "13px 20px",
+                  fontSize: "13.5px",
+                  borderTop: "1px solid rgba(35,32,31,0.05)",
+                  alignItems: "center",
+                }}
+              >
+                {cols.map((c, ci) => (
+                  <Cell key={ci} col={c} value={r[c.k]} />
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
       <div
         style={{

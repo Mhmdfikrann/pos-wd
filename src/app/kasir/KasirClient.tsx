@@ -21,12 +21,21 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { LogoutButton } from "@/components/LogoutButton";
+import { PrinterModal } from "@/components/kasir/PrinterModal";
 import { formatRupiah } from "@/lib/format";
 import { formatShiftDuration } from "@/lib/shift-rules";
 import { actionCheckout, actionSaveHeldOrder } from "@/lib/order-actions";
 import { actionCloseShift, actionGetExpectedCash, actionRecordCashMovement } from "@/lib/shift-actions";
 import type { CashMovementType, ExpectedCashBreakdown } from "@/lib/cash-data";
 import type { Receipt } from "@/lib/order";
+import {
+  buildEscPosCommands,
+  sendEscPosToBluetoothDevice,
+  printReceiptViaBrowser,
+  isWebBluetoothSupported,
+  COMMON_PRINTER_SERVICES,
+  type PaperSize,
+} from "@/lib/receipt-printer";
 
 // ---- Types ----
 type Stock = "ok" | "low" | "out";
@@ -194,6 +203,145 @@ export default function KasirClient({
   const [cashMoveNote, setCashMoveNote] = useState("");
   const [cashMoveBusy, setCashMoveBusy] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+
+  // ---- Printer State & Logic ----
+  const [paperSize, setPaperSizeState] = useState<PaperSize>("58mm");
+  const [btStatus, setBtStatus] = useState<"disconnected" | "connecting" | "connected">("disconnected");
+  const [btDevice, setBtDevice] = useState<any>(null);
+  const [btDeviceName, setBtDeviceName] = useState<string | null>(null);
+  const [showPrinterModal, setShowPrinterModal] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
+  const [printToast, setPrintToast] = useState<{ text: string; type: "success" | "error" | "info" } | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedPaper = localStorage.getItem("wd_printer_paper_size");
+      if (savedPaper === "58mm" || savedPaper === "80mm") {
+        setPaperSizeState(savedPaper as PaperSize);
+      }
+      const savedBtName = localStorage.getItem("wd_printer_bt_name");
+      if (savedBtName) {
+        setBtDeviceName(savedBtName);
+      }
+    }
+  }, []);
+
+  function setPaperSize(size: PaperSize) {
+    setPaperSizeState(size);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("wd_printer_paper_size", size);
+    }
+  }
+
+  async function handleConnectBluetooth() {
+    if (!isWebBluetoothSupported()) {
+      setPrintToast({ text: "Browser ini belum mendukung Web Bluetooth (gunakan Google Chrome).", type: "error" });
+      return;
+    }
+    try {
+      setBtStatus("connecting");
+      const device = await (navigator as any).bluetooth.requestDevice({
+        acceptAllDevices: true,
+        optionalServices: COMMON_PRINTER_SERVICES,
+      });
+
+      if (!device) {
+        setBtStatus("disconnected");
+        return;
+      }
+
+      setBtDevice(device);
+      const name = device.name || "Printer Bluetooth";
+      setBtDeviceName(name);
+      setBtStatus("connected");
+      if (typeof window !== "undefined") {
+        localStorage.setItem("wd_printer_bt_name", name);
+      }
+      setPrintToast({ text: `Terhubung ke ${name}`, type: "success" });
+
+      device.addEventListener("gattserverdisconnected", () => {
+        setBtStatus("disconnected");
+        setBtDevice(null);
+        setPrintToast({ text: "Koneksi printer Bluetooth terputus.", type: "info" });
+      });
+    } catch (err: any) {
+      setBtStatus("disconnected");
+      if (err.name !== "NotFoundError") {
+        setPrintToast({ text: err.message || "Gagal menghubungkan ke Bluetooth printer.", type: "error" });
+      }
+    }
+  }
+
+  function handleDisconnectBluetooth() {
+    if (btDevice && btDevice.gatt && btDevice.gatt.connected) {
+      btDevice.gatt.disconnect();
+    }
+    setBtDevice(null);
+    setBtDeviceName(null);
+    setBtStatus("disconnected");
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("wd_printer_bt_name");
+    }
+    setPrintToast({ text: "Printer Bluetooth diputuskan.", type: "info" });
+  }
+
+  async function handlePrintReceipt(targetReceipt?: Receipt | null) {
+    const r = targetReceipt ?? receipt;
+    if (!r) return;
+
+    setIsPrinting(true);
+    try {
+      if (btStatus === "connected" && btDevice) {
+        const escPosData = buildEscPosCommands(r, outletName, paperSize);
+        const result = await sendEscPosToBluetoothDevice(btDevice, escPosData);
+        if (result.success) {
+          setPrintToast({ text: "Struk dicetak via Bluetooth!", type: "success" });
+        } else {
+          setPrintToast({ text: `Bluetooth gagal: ${result.message}. Mencetak via browser...`, type: "error" });
+          printReceiptViaBrowser(r, outletName, paperSize);
+        }
+      } else {
+        printReceiptViaBrowser(r, outletName, paperSize);
+      }
+    } catch {
+      setPrintToast({ text: "Gagal mencetak struk.", type: "error" });
+    } finally {
+      setIsPrinting(false);
+    }
+  }
+
+  function handleTestPrint() {
+    const dummyReceipt: Receipt = {
+      orderId: "test-001",
+      orderNo: "WD-TEST-01",
+      outletId: "outlet-01",
+      createdAt: new Date().toISOString(),
+      orderType: "dinein",
+      tableNo: "05",
+      customerName: "Pelanggan Tes",
+      customerMemberId: null,
+      customerPhone: null,
+      deliveryProvider: null,
+      channelOrderName: null,
+      lines: [
+        { name: "Dimsum Siomay Ayam", sku: null, variant: "Original", unitPrice: 22000, quantity: 2, lineTotal: 44000 },
+        { name: "Hakau Udang", sku: null, variant: null, unitPrice: 25000, quantity: 1, lineTotal: 25000 },
+        { name: "Es Teh Manis", sku: null, variant: null, unitPrice: 6000, quantity: 2, lineTotal: 12000 },
+      ],
+      subtotal: 81000,
+      discountAmount: 5000,
+      taxAmount: 7600,
+      total: 83600,
+      promoId: null,
+      promoName: "Voucher Tes",
+      pointsEarned: 10,
+      voucherCode: null,
+      payment: { method: "cash", provider: null, channelLabel: "Cash/Tunai", amount: 83600, cashReceived: 100000, changeAmount: 16400, referenceNo: null },
+      payments: [{ method: "cash", provider: null, channelLabel: "Cash/Tunai", amount: 83600, cashReceived: 100000, changeAmount: 16400, referenceNo: null }],
+      replayed: false,
+    };
+    handlePrintReceipt(dummyReceipt);
+  }
 
   // Live shift-duration badge: recompute every 30s from the open timestamp.
   const shiftOpenedMs = new Date(shiftOpenedAt).getTime();
@@ -677,6 +825,35 @@ export default function KasirClient({
           <Clock size={15} strokeWidth={2} />
           Shift · {shiftLabel}
         </span>
+
+        <button
+          onClick={() => setShowPrinterModal(true)}
+          title="Pengaturan Printer POS"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 7,
+            fontSize: 12.5,
+            fontWeight: 700,
+            padding: "8px 13px",
+            borderRadius: 9,
+            border: btStatus === "connected" ? "1px solid #2E9D64" : "1px solid rgba(45,32,34,0.12)",
+            background: btStatus === "connected" ? "#F2F9F4" : "#fff",
+            color: btStatus === "connected" ? "#2E9D64" : "#2D2022",
+            cursor: "pointer",
+          }}
+        >
+          <Printer size={15} strokeWidth={2} />
+          <span className="wd-mobile-hide">{btStatus === "connected" ? (btDeviceName || "Printer BT") : "Printer"}</span>
+          <span
+            style={{
+              width: 7,
+              height: 7,
+              borderRadius: "50%",
+              background: btStatus === "connected" ? "#2E9D64" : btStatus === "connecting" ? "#D97706" : "#A91F34",
+            }}
+          />
+        </button>
         <button
           onClick={() => void openCloseShift()}
           disabled={closing}
@@ -1767,17 +1944,18 @@ export default function KasirClient({
                   </div>
                   <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
                     <button
-                      onClick={newTrx}
+                      onClick={() => handlePrintReceipt(receipt)}
+                      disabled={isPrinting}
                       style={{
                         flex: 1,
                         height: 50,
                         borderRadius: 10,
                         border: "1.5px solid rgba(45,32,34,0.15)",
-                        background: "#fff",
+                        background: btStatus === "connected" ? "#F2F9F4" : "#fff",
                         fontFamily: "inherit",
                         fontWeight: 700,
                         fontSize: 14,
-                        color: "#2D2022",
+                        color: btStatus === "connected" ? "#2E9D64" : "#2D2022",
                         cursor: "pointer",
                         display: "flex",
                         alignItems: "center",
@@ -1786,7 +1964,7 @@ export default function KasirClient({
                       }}
                     >
                       <Printer size={17} strokeWidth={2} />
-                      Cetak Struk
+                      {isPrinting ? "Mencetak..." : btStatus === "connected" ? "Cetak (BT)" : "Cetak Struk"}
                     </button>
                     <button
                       onClick={newTrx}
@@ -2548,6 +2726,50 @@ export default function KasirClient({
             );
           })()
         : null}
-</div>
-  );
-}
+
+        {/* Printer Settings Modal */}
+        <PrinterModal
+          isOpen={showPrinterModal}
+          onClose={() => setShowPrinterModal(false)}
+          btStatus={btStatus}
+          btDeviceName={btDeviceName}
+          paperSize={paperSize}
+          setPaperSize={setPaperSize}
+          onConnectBluetooth={handleConnectBluetooth}
+          onDisconnectBluetooth={handleDisconnectBluetooth}
+          onTestPrint={handleTestPrint}
+          isPrinting={isPrinting}
+        />
+
+        {/* Printer Toast Notification */}
+        {printToast && (
+          <div
+            style={{
+              position: "fixed",
+              bottom: 24,
+              right: 24,
+              zIndex: 9999,
+              background: printToast.type === "error" ? "#A91F34" : printToast.type === "success" ? "#2E9D64" : "#2D2022",
+              color: "#fff",
+              padding: "12px 18px",
+              borderRadius: 10,
+              fontWeight: 700,
+              fontSize: 13.5,
+              boxShadow: "0 8px 24px rgba(0,0,0,0.25)",
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+            }}
+          >
+            <span>{printToast.text}</span>
+            <button
+              onClick={() => setPrintToast(null)}
+              style={{ border: "none", background: "transparent", color: "#fff", cursor: "pointer", padding: 0 }}
+            >
+              <X size={16} />
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  }

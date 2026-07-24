@@ -330,7 +330,8 @@ export function CatalogManager({ label }: { label: string }) {
                           display: "flex", alignItems: "center", gap: 8,
                         }}
                       >
-                        📊 Export ke Excel (.xlsx)
+                        {ic("download", 14, "#23201F", 2)}
+                        Export ke Excel (.xlsx)
                       </button>
                       <button
                         type="button"
@@ -344,7 +345,8 @@ export function CatalogManager({ label }: { label: string }) {
                           display: "flex", alignItems: "center", gap: 8,
                         }}
                       >
-                        📄 Export ke PDF (.pdf)
+                        {ic("download", 14, "#23201F", 2)}
+                        Export ke PDF (.pdf)
                       </button>
                     </div>
                   </>
@@ -597,7 +599,8 @@ function ActionMenu({
               }}
               style={dropdownItemStyle}
             >
-              ✏️ Edit
+              {ic("edit", 14, "currentColor", 2)}
+              Edit
             </button>
             {onToggleAvail ? (
               <button
@@ -608,7 +611,17 @@ function ActionMenu({
                 }}
                 style={dropdownItemStyle}
               >
-                {available ? "🚫 Set Habis" : "✅ Set Ada"}
+                {available ? (
+                  <>
+                    {ic("ban", 14, "currentColor", 2)}
+                    Set Habis
+                  </>
+                ) : (
+                  <>
+                    {ic("check", 14, "currentColor", 2)}
+                    Set Ada
+                  </>
+                )}
               </button>
             ) : null}
             <button
@@ -619,7 +632,8 @@ function ActionMenu({
               }}
               style={{ ...dropdownItemStyle, color: "#B83636" }}
             >
-              🗑️ Hapus
+              {ic("trash", 14, "#B83636", 2)}
+              Hapus
             </button>
           </div>
         </>
@@ -1097,10 +1111,11 @@ function EditModal({
                       <button
                         type="button"
                         onClick={() => setPackageItemsList(packageItemsList.filter((_, i) => i !== idx))}
-                        style={{ ...miniBtn(true), height: 36, padding: "0 8px" }}
+                        style={{ ...miniBtn(true), height: 36, padding: "0 10px", display: "inline-flex", alignItems: "center", gap: 6 }}
                         title="Hapus produk dari paket"
                       >
-                        🗑️ Hapus
+                        {ic("trash", 14, "#B83636", 2)}
+                        Hapus
                       </button>
                     </div>
                   </div>
@@ -1264,10 +1279,10 @@ function EditModal({
                       <button
                         type="button"
                         onClick={() => setRecipeList(recipeList.filter((_, i) => i !== idx))}
-                        style={{ ...miniBtn(true), height: 36, padding: "0 8px" }}
+                        style={{ ...miniBtn(true), height: 36, padding: "0 8px", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
                         title="Hapus bahan dari resep"
                       >
-                        🗑️
+                        {ic("trash", 14, "#B83636", 2)}
                       </button>
                     </div>
                   </div>

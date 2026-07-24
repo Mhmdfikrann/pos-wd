@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { formatRupiah } from "@/lib/format";
 import { ic } from "./icons";
 import { Badge, MiniStat, MONO } from "./shared";
+import { syncRawMaterialsToStock } from "@/lib/stock-sync";
 
 export interface UnitConversion {
   id: string;
@@ -153,12 +154,43 @@ const inpStyle: React.CSSProperties = {
 
 export function RawMaterialManager() {
   const [items, setItems] = useState<RawMaterialItem[]>(DEFAULT_MATERIALS);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("pos_wd_inventory_raw_materials");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setItems(parsed);
+        }
+      } catch (e) {}
+    }
+    setIsInitialized(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isInitialized) return;
+    localStorage.setItem("pos_wd_inventory_raw_materials", JSON.stringify(items));
+    syncRawMaterialsToStock(items);
+  }, [items, isInitialized]);
+
   const [query, setQuery] = useState("");
   const [editingItem, setEditingItem] = useState<RawMaterialItem | null>(null);
   const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [msg, setMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
 
-  // Form states
+  // Export dropdown state
+  const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
+  const exportRef = useRef<HTMLDivElement>(null);
+
+  // Bulk Import modal state
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [importedFile, setImportedFile] = useState<File | null>(null);
+  const [parsedImportItems, setParsedImportItems] = useState<RawMaterialItem[]>([]);
+  const [importError, setImportError] = useState<string | null>(null);
+
+  // Form states for Create/Edit Modal
   const [formName, setFormName] = useState("");
   const [formSku, setFormSku] = useState("");
   const [formOutlets, setFormOutlets] = useState<string[]>(["Outlet Utama - Jakarta"]);
@@ -167,6 +199,17 @@ export function RawMaterialManager() {
   const [formPrimaryUnit, setFormPrimaryUnit] = useState("kg");
   const [formPurchaseCost, setFormPurchaseCost] = useState("45000");
   const [formConversions, setFormConversions] = useState<UnitConversion[]>([]);
+
+  // Click outside to close export dropdown
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (exportRef.current && !exportRef.current.contains(event.target as Node)) {
+        setExportDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   function openCreateModal() {
     setIsCreatingNew(true);
@@ -201,7 +244,7 @@ export function RawMaterialManager() {
     const cost = Number(formPurchaseCost.replace(/[^0-9]/g, "")) || 0;
 
     let nextStatus: "Tersedia" | "Menipis" | "Habis" = "Tersedia";
-    const curStock = editingItem ? editingItem.currentStock : 20;
+    const curStock = editingItem ? editingItem.currentStock : 0;
     if (curStock === 0) nextStatus = "Habis";
     else if (curStock <= minAlert) nextStatus = "Menipis";
 
@@ -248,6 +291,7 @@ export function RawMaterialManager() {
     ]);
   }
 
+  // --- EXPORT FUNCTIONS ---
   function handleExportExcel() {
     const headers = ["SKU", "Nama Bahan Baku", "Outlet", "Stok", "Stok Min Alert", "Harga Beli", "Total Nilai", "Status"];
     const rows = items.map((i) => [
@@ -348,6 +392,149 @@ export function RawMaterialManager() {
     printWin.document.close();
   }
 
+  // --- BULK IMPORT FUNCTIONS ---
+  function handleDownloadTemplate() {
+    const headers = [
+      "alasan_gagal",
+      "data_kode_barang",
+      "data_nama_barang",
+      "data_harga_beli",
+      "data_harga_jual",
+      "data_stok",
+      "data_barang_jasa",
+      "data_show_toko",
+      "minimum_stok",
+      "tipe_diskon",
+      "diskon",
+      "berat_dan_satuan",
+      "berat",
+      "letak_rak",
+      "keterangan",
+      "kategori",
+      "gambar",
+    ];
+
+    const sampleRows = [
+      ["", "BB-006", "Minyak Wijen Woei Seng 600ml", "58000", "0", "12", "0", "0", "10", "0", "0", "botol", "600", "Rak A-01", "Bumbu olahan dimsum", "Bahan Baku", ""],
+      ["", "BB-007", "Kecap Asin Cap Hati Kudus 600ml", "35000", "0", "24", "0", "0", "5", "0", "0", "botol", "600", "Rak A-02", "Bumbu dapur utama", "Bahan Baku", ""],
+      ["", "KM-003", "Kantong Plastik Takeaway L", "12000", "0", "150", "0", "0", "50", "0", "0", "pack", "500", "Rak B-01", "Pembungkus takeaway", "Kemasan", ""],
+    ];
+
+    const csvContent = [headers.join(","), ...sampleRows.map((r) => r.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(","))].join("\r\n");
+
+    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `Template_Bahan_Baku_Wanna_Dimsum.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+
+  function handleFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImportedFile(file);
+    setImportError(null);
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const text = evt.target?.result as string;
+        if (!text) {
+          setImportError("File kosong atau tidak dapat dibaca!");
+          return;
+        }
+
+        const lines = text
+          .split(/\r\n|\n/)
+          .map((l) => l.trim())
+          .filter((l) => l.length > 0);
+        if (lines.length < 2) {
+          setImportError("File harus memiliki header dan setidaknya 1 baris data!");
+          return;
+        }
+
+        const rawHeaders = lines[0].split(",").map((h) => h.replace(/^["']|["']$/g, "").trim().toLowerCase());
+
+        const skuIdx = rawHeaders.findIndex((h) => h.includes("data_kode_barang") || h.includes("sku") || h.includes("kode"));
+        const nameIdx = rawHeaders.findIndex((h) => h.includes("data_nama_barang") || h.includes("nama"));
+        const costIdx = rawHeaders.findIndex((h) => h.includes("data_harga_beli") || h.includes("harga_beli") || h.includes("cost"));
+        const stockIdx = rawHeaders.findIndex((h) => h.includes("data_stok") || h.includes("stok"));
+        const minIdx = rawHeaders.findIndex((h) => h.includes("minimum_stok") || h.includes("min_stok") || h.includes("alert"));
+        const unitIdx = rawHeaders.findIndex((h) => h.includes("berat_dan_satuan") || h.includes("satuan") || h.includes("unit"));
+
+        const parsed: RawMaterialItem[] = [];
+
+        for (let i = 1; i < lines.length; i++) {
+          const rowCells = lines[i].split(",").map((c) => c.replace(/^["']|["']$/g, "").trim());
+          if (rowCells.length < 2) continue;
+
+          const sku = (skuIdx >= 0 ? rowCells[skuIdx] : "") || `BB-IMP-${Date.now()}-${i}`;
+          const name = nameIdx >= 0 ? rowCells[nameIdx] : "";
+          if (!name) continue;
+
+          const purchaseCost = costIdx >= 0 ? Number(rowCells[costIdx].replace(/[^0-9]/g, "")) || 25000 : 25000;
+          const currentStock = stockIdx >= 0 ? Number(rowCells[stockIdx].replace(/[^0-9]/g, "")) || 10 : 10;
+          const minStockAlert = minIdx >= 0 ? Number(rowCells[minIdx].replace(/[^0-9]/g, "")) || 5 : 5;
+          const primaryUnit = unitIdx >= 0 && rowCells[unitIdx] ? rowCells[unitIdx] : "kg";
+
+          let status: "Tersedia" | "Menipis" | "Habis" = "Tersedia";
+          if (currentStock === 0) status = "Habis";
+          else if (currentStock <= minStockAlert) status = "Menipis";
+
+          parsed.push({
+            id: `rm-imp-${Date.now()}-${i}`,
+            sku,
+            name,
+            outlets: ["Outlet Utama - Jakarta"],
+            monitorStock: true,
+            minStockAlert,
+            currentStock,
+            primaryUnit,
+            purchaseCost,
+            unitConversions: [],
+            status,
+          });
+        }
+
+        if (parsed.length === 0) {
+          setImportError("Tidak ada baris data bahan baku yang valid ditemukan!");
+        } else {
+          setParsedImportItems(parsed);
+        }
+      } catch (err) {
+        setImportError("Gagal membaca format file. Pastikan menggunakan template Excel/CSV yang benar.");
+      }
+    };
+
+    reader.readAsText(file, "UTF-8");
+  }
+
+  function handleProcessImport() {
+    if (parsedImportItems.length === 0) return;
+
+    const updated = [...items];
+    for (const newItem of parsedImportItems) {
+      const idx = updated.findIndex((existing) => existing.sku === newItem.sku || existing.name.toLowerCase() === newItem.name.toLowerCase());
+      if (idx >= 0) {
+        updated[idx] = { ...updated[idx], ...newItem, id: updated[idx].id };
+      } else {
+        updated.unshift(newItem);
+      }
+    }
+
+    setItems(updated);
+    setMsg({ type: "ok", text: `🎉 Berhasil mengimpor massal ${parsedImportItems.length} bahan baku ke dalam inventori!` });
+    setImportModalOpen(false);
+    setImportedFile(null);
+    setParsedImportItems([]);
+    setImportError(null);
+  }
+
   const shownItems = items.filter(
     (i) =>
       !query.trim() ||
@@ -357,7 +544,7 @@ export function RawMaterialManager() {
 
   const totalValue = items.reduce((acc, i) => acc + i.currentStock * i.purchaseCost, 0);
   const needRestock = items.filter((i) => i.currentStock <= i.minStockAlert).length;
-  const tableTmpl = "1.1fr 2fr 1.6fr 1.1fr 0.9fr 1.4fr 1fr 0.6fr";
+  const tableTmpl = "1.2fr 2.4fr 1.8fr 1.2fr 1fr 1.1fr 0.7fr";
 
   return (
     <div className="wd-owner-raw-material-manager">
@@ -374,13 +561,55 @@ export function RawMaterialManager() {
             Kelola bahan baku, outlet terdaftar, pengingat stok minimum, serta informasi konversi satuan & harga beli.
           </div>
         </div>
-        <div>
+
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          {/* Tombol Impor Massal */}
+          <button
+            onClick={() => {
+              setImportModalOpen(true);
+              setImportedFile(null);
+              setParsedImportItems([]);
+              setImportError(null);
+            }}
+            style={{
+              height: 42,
+              padding: "0 18px",
+              borderRadius: 10,
+              border: "1px solid rgba(35,32,31,0.16)",
+              background: "#fff",
+              color: "#23201F",
+              fontFamily: "inherit",
+              fontWeight: 700,
+              fontSize: 13,
+              cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              boxShadow: "0 2px 6px rgba(0,0,0,0.04)",
+            }}
+          >
+            {ic("upload", 15, "#23201F", 2.2)}
+            + Impor Massal
+          </button>
+
+          {/* Tombol Tambah Bahan Baku */}
           <button
             onClick={openCreateModal}
             style={{
-              height: 42, padding: "0 18px", borderRadius: 10, border: "none",
-              background: "#A91F34", color: "#fff", fontFamily: "inherit", fontWeight: 700,
-              fontSize: 13, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 8,
+              height: 42,
+              padding: "0 18px",
+              borderRadius: 10,
+              border: "none",
+              background: "#A91F34",
+              color: "#fff",
+              fontFamily: "inherit",
+              fontWeight: 700,
+              fontSize: 13,
+              cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              boxShadow: "0 4px 12px rgba(169,31,52,0.25)",
             }}
           >
             {ic("plus", 15, "#fff", 2.4)}
@@ -428,299 +657,592 @@ export function RawMaterialManager() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Cari daftar bahan baku..."
-            style={inpStyle}
+            style={{ ...inpStyle, paddingLeft: 36 }}
           />
         </div>
+
         <div style={{ flex: 1 }} />
-        <button
-          onClick={handleExportExcel}
-          style={{
-            height: 40, padding: "0 14px", borderRadius: 9, border: "1px solid rgba(35,32,31,0.12)",
-            background: "#fff", fontFamily: "inherit", fontSize: 12.5, fontWeight: 600,
-            color: "rgba(35,32,31,0.65)", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 7,
-          }}
-        >
-          {ic("download", 14, "currentColor", 2)}
-          Export Excel
-        </button>
-        <button
-          onClick={handleExportPdf}
-          style={{
-            height: 40, padding: "0 14px", borderRadius: 9, border: "1px solid rgba(35,32,31,0.12)",
-            background: "#fff", fontFamily: "inherit", fontSize: 12.5, fontWeight: 600,
-            color: "rgba(35,32,31,0.65)", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 7,
-          }}
-        >
-          {ic("download", 14, "currentColor", 2)}
-          Export PDF
-        </button>
+
+        {/* Dynamic 1-Button Dropdown Export (Cetak / Export ▾) */}
+        <div style={{ position: "relative" }} ref={exportRef}>
+          <button
+            onClick={() => setExportDropdownOpen(!exportDropdownOpen)}
+            style={{
+              height: 40,
+              padding: "0 16px",
+              borderRadius: 9,
+              border: "1px solid rgba(35,32,31,0.16)",
+              background: "#fff",
+              fontFamily: "inherit",
+              fontSize: 13,
+              fontWeight: 700,
+              color: "rgba(35,32,31,0.85)",
+              cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              boxShadow: "0 2px 5px rgba(0,0,0,0.03)",
+            }}
+          >
+            {ic("download", 15, "#A91F34", 2.2)}
+            Cetak / Export
+            <span style={{ fontSize: 10, marginLeft: 2 }}>▾</span>
+          </button>
+
+          {exportDropdownOpen ? (
+            <div
+              style={{
+                position: "absolute",
+                right: 0,
+                top: "100%",
+                marginTop: 6,
+                background: "#fff",
+                borderRadius: 10,
+                border: "1px solid rgba(35,32,31,0.12)",
+                boxShadow: "0 10px 30px rgba(0,0,0,0.12)",
+                zIndex: 100,
+                minWidth: 170,
+                overflow: "hidden",
+                padding: "4px 0",
+              }}
+            >
+              <button
+                onClick={() => {
+                  setExportDropdownOpen(false);
+                  handleExportPdf();
+                }}
+                style={{
+                  width: "100%",
+                  textAlign: "left",
+                  padding: "10px 16px",
+                  border: "none",
+                  background: "none",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: "#23201F",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "#FFF9F2")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
+              >
+                {ic("filePlus", 14, "#23201F", 2)}
+                Export PDF
+              </button>
+              <button
+                onClick={() => {
+                  setExportDropdownOpen(false);
+                  handleExportExcel();
+                }}
+                style={{
+                  width: "100%",
+                  textAlign: "left",
+                  padding: "10px 16px",
+                  border: "none",
+                  borderTop: "1px solid rgba(35,32,31,0.06)",
+                  background: "none",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: "#23201F",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "#FFF9F2")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
+              >
+                {ic("download", 14, "#23201F", 2)}
+                Export Excel
+              </button>
+            </div>
+          ) : null}
+        </div>
       </div>
 
-      {/* Main Table: Daftar Bahan Baku */}
+      {/* Main Table */}
       <div className="wd-responsive-table" style={CARD}>
         <div style={{ overflowX: "auto" }} className="wd-scroll">
-          <div style={{ minWidth: 780 }}>
+          <div style={{ minWidth: 920 }}>
+            {/* Header */}
             <div style={{ ...HEAD, gridTemplateColumns: tableTmpl }}>
               <div>SKU</div>
-              <div>Bahan / Produk</div>
-              <div>Outlet</div>
-              <div>Persediaan</div>
-              <div>Stok Min</div>
-              <div>Harga Beli</div>
+              <div>Nama Bahan Baku</div>
+              <div>Outlet Terdaftar</div>
+              <div style={{ textAlign: "right" }}>Stok Fisik</div>
+              <div style={{ textAlign: "right" }}>Min Alert</div>
               <div>Status</div>
               <div style={{ textAlign: "right" }}>Aksi</div>
             </div>
 
+            {/* Rows */}
             {shownItems.length === 0 ? (
               <div style={{ padding: 40, textAlign: "center", color: "rgba(35,32,31,0.5)", fontSize: 13.5 }}>
-                Belum ada bahan baku terdaftar.
+                Tidak ada data bahan baku yang ditemukan.
               </div>
             ) : (
-              shownItems.map((item) => (
-                <div key={item.id} style={{ ...ROW, gridTemplateColumns: tableTmpl }}>
-                  <div style={{ fontFamily: MONO, fontSize: 12, fontWeight: 600, color: "rgba(35,32,31,0.6)" }}>{item.sku}</div>
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: 13.5 }}>{item.name}</div>
-                    {item.unitConversions.length > 0 ? (
-                      <div style={{ fontSize: 11, color: "rgba(35,32,31,0.5)", marginTop: 2 }}>
-                        {item.unitConversions.length} Konversi Satuan ({item.unitConversions.map((u) => u.unit).join(", ")})
-                      </div>
-                    ) : null}
+              shownItems.map((item) => {
+                const tone = item.status === "Tersedia" ? "ok" : item.status === "Menipis" ? "warn" : "out";
+                return (
+                  <div key={item.id} style={{ ...ROW, gridTemplateColumns: tableTmpl }}>
+                    <div style={{ fontFamily: MONO, fontWeight: 700, fontSize: 12.5 }}>{item.sku}</div>
+                    <div>
+                      <div style={{ fontWeight: 700, color: "#23201F" }}>{item.name}</div>
+                      {item.unitConversions && item.unitConversions.length > 0 ? (
+                        <div style={{ fontSize: 11.5, color: "rgba(35,32,31,0.45)", marginTop: 2 }}>
+                          {item.unitConversions.length} konversi satuan terhubung
+                        </div>
+                      ) : null}
+                    </div>
+                    <div style={{ fontSize: 12.5, color: "rgba(35,32,31,0.7)", fontWeight: 500 }}>
+                      {item.outlets.join(", ")}
+                    </div>
+                    <div style={{ textAlign: "right", fontFamily: MONO, fontWeight: 800, fontSize: 13.5 }}>
+                      {item.currentStock} {item.primaryUnit}
+                    </div>
+                    <div style={{ textAlign: "right", fontFamily: MONO, color: "rgba(35,32,31,0.5)", fontSize: 12.5 }}>
+                      {item.minStockAlert} {item.primaryUnit}
+                    </div>
+                    <div>
+                      <Badge text={item.status} tone={tone} />
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <button
+                        onClick={() => openEditModal(item)}
+                        style={{
+                          height: 32,
+                          padding: "0 12px",
+                          borderRadius: 8,
+                          border: "1px solid rgba(35,32,31,0.14)",
+                          background: "#fff",
+                          fontFamily: "inherit",
+                          fontSize: 12,
+                          fontWeight: 700,
+                          cursor: "pointer",
+                        }}
+                      >
+                        Edit
+                      </button>
+                    </div>
                   </div>
-                  <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-                    {item.outlets.map((o) => (
-                      <span key={o} style={{ fontSize: 11, background: "rgba(35,32,31,0.06)", padding: "2px 7px", borderRadius: 6, fontWeight: 600 }}>
-                        {o.replace(" - Jakarta", "")}
-                      </span>
-                    ))}
-                  </div>
-                  <div style={{ fontFamily: MONO, fontWeight: 700, fontSize: 13 }}>
-                    {item.currentStock} {item.primaryUnit}
-                  </div>
-                  <div style={{ fontFamily: MONO, fontSize: 12.5, color: "rgba(35,32,31,0.7)" }}>
-                    {item.minStockAlert} {item.primaryUnit}
-                  </div>
-                  <div style={{ fontFamily: MONO, fontSize: 12.5, color: "#A91F34", fontWeight: 700 }}>
-                    {formatRupiah(item.purchaseCost)} / {item.primaryUnit}
-                  </div>
-                  <div>
-                    {item.status === "Tersedia" ? (
-                      <Badge text="Tersedia" tone="ok" />
-                    ) : item.status === "Menipis" ? (
-                      <Badge text="Menipis" tone="warn" />
-                    ) : (
-                      <Badge text="Habis" tone="out" />
-                    )}
-                  </div>
-                  <div style={{ textAlign: "right" }}>
-                    <button
-                      onClick={() => openEditModal(item)}
-                      style={{
-                        height: 32,
-                        padding: "0 12px",
-                        borderRadius: 8,
-                        border: "1px solid rgba(35,32,31,0.14)",
-                        background: "#fff",
-                        fontFamily: "inherit",
-                        fontSize: 12,
-                        fontWeight: 700,
-                        cursor: "pointer",
-                        color: "#2D2022",
-                      }}
-                      title="Edit Bahan Baku"
-                    >
-                      ✏️ Edit
-                    </button>
-                  </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>
       </div>
 
-      {/* Modal Edit / Tambah Bahan Baku */}
-      {editingItem || isCreatingNew ? (
+      {/* --- MODAL IMPOR MASSAL BAHAN BAKU --- */}
+      {importModalOpen ? (
         <div
-          onClick={() => {
-            setEditingItem(null);
-            setIsCreatingNew(false);
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            padding: 16,
           }}
-          style={{ position: "fixed", inset: 0, background: "rgba(20,16,16,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 60, padding: 20 }}
         >
           <div
-            onClick={(e) => e.stopPropagation()}
-            className="wd-slideup"
             style={{
-              width: "100%",
-              maxWidth: 760,
               background: "#fff",
               borderRadius: 16,
-              padding: 24,
-              boxShadow: "0 30px 60px -20px rgba(0,0,0,0.4)",
+              width: "100%",
+              maxWidth: 620,
               maxHeight: "90vh",
               display: "flex",
               flexDirection: "column",
+              overflow: "hidden",
+              boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
             }}
           >
             {/* Modal Header */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "16px 22px",
+                borderBottom: "1px solid rgba(35,32,31,0.08)",
+                background: "#FFF9F2",
+              }}
+            >
               <div>
-                <div style={{ fontSize: 18, fontWeight: 800 }}>
-                  {isCreatingNew ? "Tambah Daftar Bahan Baku" : `Edit Bahan Baku: ${formName}`}
+                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: "#A91F34" }}>Impor Massal Bahan Baku</h3>
+                <p style={{ margin: "2px 0 0", fontSize: 12, color: "rgba(35,32,31,0.6)" }}>
+                  Upload file Excel/CSV sesuai format template untuk mendaftarkan bahan baku secara cepat.
+                </p>
+              </div>
+              <button
+                onClick={() => setImportModalOpen(false)}
+                style={{ background: "none", border: "none", fontSize: 18, fontWeight: 800, cursor: "pointer", color: "rgba(35,32,31,0.5)" }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div style={{ padding: 22, overflowY: "auto", flex: 1 }}>
+              {/* Step 1: Download Template */}
+              <div
+                style={{
+                  background: "#F5F6F8",
+                  border: "1px solid rgba(35,32,31,0.08)",
+                  borderRadius: 12,
+                  padding: 16,
+                  marginBottom: 18,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 14,
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: 13.5, fontWeight: 800, color: "#23201F" }}>1. Download Template Excel</div>
+                  <div style={{ fontSize: 12, color: "rgba(35,32,31,0.6)", marginTop: 2 }}>
+                    Unduh format template Excel resmi dengan kolom data bahan baku & petunjuk pengisian.
+                  </div>
                 </div>
-                <div style={{ fontSize: 12.5, color: "rgba(35,32,31,0.5)", marginTop: 2 }}>
-                  Atur outlet, monitor persediaan, pengingat stok minimum, serta informasi konversi satuan & harga beli.
+
+                <button
+                  onClick={handleDownloadTemplate}
+                  style={{
+                    height: 38,
+                    padding: "0 16px",
+                    borderRadius: 9,
+                    border: "1px solid #A91F34",
+                    background: "#FFF9F2",
+                    color: "#A91F34",
+                    fontFamily: "inherit",
+                    fontSize: 12.5,
+                    fontWeight: 800,
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {ic("download", 14, "#A91F34", 2.2)}
+                  Download Template Excel
+                </button>
+              </div>
+
+              {/* Step 2: Upload File */}
+              <div style={{ marginBottom: 18 }}>
+                <div style={{ fontSize: 13.5, fontWeight: 800, color: "#23201F", marginBottom: 8 }}>
+                  2. Upload File Template Excel / CSV
                 </div>
+
+                <div
+                  style={{
+                    border: "2px dashed rgba(35,32,31,0.18)",
+                    borderRadius: 12,
+                    padding: "28px 20px",
+                    textAlign: "center",
+                    background: "#FAFAFA",
+                    cursor: "pointer",
+                    position: "relative",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <input
+                    type="file"
+                    accept=".csv, .xls, .xlsx, .txt"
+                    onChange={handleFileSelected}
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      opacity: 0,
+                      cursor: "pointer",
+                      width: "100%",
+                      height: "100%",
+                      zIndex: 10,
+                    }}
+                  />
+                  <div style={{ marginBottom: 10, color: "#A91F34", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    {ic("upload", 32, "#A91F34", 1.8)}
+                  </div>
+                  <div style={{ fontSize: 13.5, fontWeight: 700, color: "#23201F" }}>
+                    {importedFile ? importedFile.name : "Klik atau seret file Excel/CSV di sini"}
+                  </div>
+                  <div style={{ fontSize: 12, color: "rgba(35,32,31,0.5)", marginTop: 4 }}>
+                    Mendukung file format <code>.xlsx</code>, <code>.xls</code>, atau <code>.csv</code>
+                  </div>
+                </div>
+              </div>
+
+              {/* Import Error Message */}
+              {importError ? (
+                <div
+                  style={{
+                    padding: "10px 14px",
+                    borderRadius: 9,
+                    background: "#FDE8E8",
+                    color: "#B83636",
+                    border: "1px solid #F8B4B4",
+                    fontSize: 12.5,
+                    fontWeight: 600,
+                    marginBottom: 16,
+                  }}
+                >
+                  ⚠️ {importError}
+                </div>
+              ) : null}
+
+              {/* Parsed Preview Table */}
+              {parsedImportItems.length > 0 ? (
+                <div>
+                  <div
+                    style={{
+                      fontSize: 13,
+                      fontWeight: 800,
+                      color: "#238152",
+                      marginBottom: 8,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                    }}
+                  >
+                    {ic("checkCircle", 16, "#238152", 2)}
+                    {parsedImportItems.length} Item Bahan Baku Siap Diimpor
+                  </div>
+
+                  <div style={{ border: "1px solid rgba(35,32,31,0.1)", borderRadius: 10, overflow: "hidden", maxHeight: 180, overflowY: "auto" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                      <thead>
+                        <tr style={{ background: "#FFF9F2", color: "#A91F34", textAlign: "left" }}>
+                          <th style={{ padding: "8px 10px" }}>SKU</th>
+                          <th style={{ padding: "8px 10px" }}>Nama Bahan Baku</th>
+                          <th style={{ padding: "8px 10px", textAlign: "right" }}>Stok</th>
+                          <th style={{ padding: "8px 10px", textAlign: "right" }}>Harga Beli</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {parsedImportItems.map((item, idx) => (
+                          <tr key={idx} style={{ borderTop: "1px solid rgba(35,32,31,0.06)" }}>
+                            <td style={{ padding: "8px 10px", fontFamily: MONO, fontWeight: 700 }}>{item.sku}</td>
+                            <td style={{ padding: "8px 10px", fontWeight: 700 }}>{item.name}</td>
+                            <td style={{ padding: "8px 10px", textAlign: "right", fontFamily: MONO }}>
+                              {item.currentStock} {item.primaryUnit}
+                            </td>
+                            <td style={{ padding: "8px 10px", textAlign: "right", fontFamily: MONO }}>
+                              {formatRupiah(item.purchaseCost)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
+            {/* Modal Footer */}
+            <div
+              style={{
+                padding: "14px 22px",
+                borderTop: "1px solid rgba(35,32,31,0.08)",
+                background: "#FAFAFA",
+                display: "flex",
+                gap: 10,
+                justifyContent: "flex-end",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setImportModalOpen(false)}
+                style={{
+                  height: 40,
+                  padding: "0 18px",
+                  borderRadius: 9,
+                  border: "1px solid rgba(35,32,31,0.14)",
+                  background: "#fff",
+                  fontFamily: "inherit",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleProcessImport}
+                disabled={parsedImportItems.length === 0}
+                style={{
+                  height: 40,
+                  padding: "0 22px",
+                  borderRadius: 9,
+                  border: "none",
+                  background: "#A91F34",
+                  color: "#fff",
+                  fontFamily: "inherit",
+                  fontSize: 13,
+                  fontWeight: 800,
+                  cursor: "pointer",
+                  opacity: parsedImportItems.length === 0 ? 0.5 : 1,
+                }}
+              >
+                Proses Impor Massal ({parsedImportItems.length})
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {/* --- MODAL CREATE / EDIT BAHAN BAKU --- */}
+      {isCreatingNew || editingItem ? (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            padding: 16,
+          }}
+        >
+          <div
+            style={{
+              background: "#fff",
+              borderRadius: 16,
+              width: "100%",
+              maxWidth: 680,
+              maxHeight: "92vh",
+              overflowY: "auto",
+              padding: 24,
+              boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
+            }}
+            className="wd-scroll"
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: "#23201F" }}>
+                  {editingItem ? "Edit Bahan Baku" : "Tambah Bahan Baku Baru"}
+                </h3>
+                <p style={{ margin: "2px 0 0", fontSize: 12.5, color: "rgba(35,32,31,0.55)" }}>
+                  Isi rincian informasi bahan baku, pengingat stok, dan konversi satuan.
+                </p>
               </div>
               <button
                 onClick={() => {
                   setEditingItem(null);
                   setIsCreatingNew(false);
                 }}
-                style={{ background: "none", border: "none", fontSize: 18, cursor: "pointer", color: "rgba(35,32,31,0.5)" }}
+                style={{ background: "none", border: "none", fontSize: 18, fontWeight: 800, cursor: "pointer", color: "rgba(35,32,31,0.4)" }}
               >
                 ✕
               </button>
             </div>
 
-            {/* Modal Scrollable Body */}
-            <div style={{ flex: 1, overflowY: "auto", paddingRight: 4, marginBottom: 16 }}>
-              {/* Form Grid Section 1 */}
-              <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 12, marginBottom: 14 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 16, marginBottom: 20 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 12 }}>
                 <div>
-                  <label style={{ fontSize: 12, fontWeight: 700, display: "block", marginBottom: 4, color: "rgba(35,32,31,0.7)" }}>Daftar Outlet</label>
-                  <select
-                    value={formOutlets[0] || ""}
-                    onChange={(e) => setFormOutlets([e.target.value])}
-                    style={inpStyle}
-                  >
-                    {AVAILABLE_OUTLETS.map((o) => (
-                      <option key={o} value={o}>{o}</option>
-                    ))}
-                  </select>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: "rgba(35,32,31,0.7)", display: "block", marginBottom: 4 }}>SKU Bahan Baku</label>
+                  <input
+                    value={formSku}
+                    onChange={(e) => setFormSku(e.target.value)}
+                    placeholder="BB-001"
+                    style={{ ...inpStyle, fontFamily: MONO, fontWeight: 700 }}
+                  />
                 </div>
                 <div>
-                  <label style={{ fontSize: 12, fontWeight: 700, display: "block", marginBottom: 4, color: "rgba(35,32,31,0.7)" }}>Nama Bahan Baku</label>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: "rgba(35,32,31,0.7)", display: "block", marginBottom: 4 }}>Nama Bahan Baku *</label>
                   <input
                     value={formName}
                     onChange={(e) => setFormName(e.target.value)}
-                    placeholder="Misal: Daging Ayam Giling, Kulit Dimsum"
-                    style={inpStyle}
+                    placeholder="Nama bahan baku"
+                    style={{ ...inpStyle, fontWeight: 700 }}
                   />
                 </div>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 700, color: "rgba(35,32,31,0.7)", display: "block", marginBottom: 6 }}>Outlet Terdaftar</label>
+                <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                  {AVAILABLE_OUTLETS.map((out) => {
+                    const checked = formOutlets.includes(out);
+                    return (
+                      <label key={out} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, cursor: "pointer" }}>
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={(e) => {
+                            if (e.target.checked) setFormOutlets([...formOutlets, out]);
+                            else setFormOutlets(formOutlets.filter((o) => o !== out));
+                          }}
+                        />
+                        {out}
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <div>
-                  <label style={{ fontSize: 12, fontWeight: 700, display: "block", marginBottom: 4, color: "rgba(35,32,31,0.7)" }}>SKU Bahan Baku</label>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: "rgba(35,32,31,0.7)", display: "block", marginBottom: 4 }}>Satuan Utama</label>
                   <input
-                    value={formSku}
-                    onChange={(e) => setFormSku(e.target.value)}
-                    placeholder="Misal: BB-001"
-                    style={{ ...inpStyle, fontFamily: MONO }}
+                    value={formPrimaryUnit}
+                    onChange={(e) => setFormPrimaryUnit(e.target.value)}
+                    placeholder="kg, pack, pcs"
+                    style={inpStyle}
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: 12, fontWeight: 700, display: "block", marginBottom: 4, color: "rgba(35,32,31,0.7)" }}>Pengingat Stok Minimum</label>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: "rgba(35,32,31,0.7)", display: "block", marginBottom: 4 }}>Stok Min Alert</label>
                   <input
                     value={formMinStockAlert}
-                    onChange={(e) => setFormMinStockAlert(e.target.value.replace(/[^0-9]/g, ""))}
-                    inputMode="numeric"
+                    onChange={(e) => setFormMinStockAlert(e.target.value)}
                     placeholder="10"
                     style={{ ...inpStyle, fontFamily: MONO }}
                   />
                 </div>
               </div>
 
-              <div style={{ marginBottom: 16, background: "#FAF8F5", padding: 12, borderRadius: 10, border: "1px solid rgba(35,32,31,0.08)" }}>
-                <label style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
-                  <input
-                    type="checkbox"
-                    checked={formMonitorStock}
-                    onChange={(e) => setFormMonitorStock(e.target.checked)}
-                    style={{ width: 18, height: 18, accentColor: "#A91F34" }}
-                  />
-                  <span>Monitor Persediaan Otomatis (potong stok saat transaksi / resep terpakai)</span>
-                </label>
-              </div>
-
-              {/* Section: Informasi Satuan Utama */}
-              <div style={{ marginBottom: 16, background: "#FFF9F2", padding: 14, borderRadius: 12, border: "1px solid rgba(169,31,52,0.15)" }}>
-                <div style={{ fontSize: 13, fontWeight: 800, color: "#A91F34", marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.03em" }}>
-                  Informasi Satuan Utama & Harga Beli
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1.2fr", gap: 12 }}>
-                  <div>
-                    <label style={{ fontSize: 12, fontWeight: 700, display: "block", marginBottom: 4, color: "rgba(35,32,31,0.7)" }}>Satuan Utama</label>
-                    <input
-                      value={formPrimaryUnit}
-                      onChange={(e) => setFormPrimaryUnit(e.target.value)}
-                      placeholder="Misal: kg, pack, pcs, liter, box"
-                      style={inpStyle}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ fontSize: 12, fontWeight: 700, display: "block", marginBottom: 4, color: "rgba(35,32,31,0.7)" }}>Harga Beli Per Satuan Utama (Rp)</label>
-                    <input
-                      value={formPurchaseCost}
-                      onChange={(e) => setFormPurchaseCost(e.target.value.replace(/[^0-9]/g, ""))}
-                      inputMode="numeric"
-                      placeholder="0"
-                      style={{ ...inpStyle, fontFamily: MONO, fontWeight: 700, color: "#A91F34" }}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Section: Informasi Satuan Konversi (+ Tambah Satuan) */}
-              <div style={{ border: "1px solid rgba(35,32,31,0.1)", borderRadius: 12, padding: 14 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 800 }}>Informasi Satuan (Konversi Multi-Satuan)</div>
-                    <div style={{ fontSize: 11.5, color: "rgba(35,32,31,0.5)", marginTop: 2 }}>
-                      Atur konversi satuan sekunder (misal 1 {formPrimaryUnit || "kg"} = 1000 gram).
-                    </div>
-                  </div>
+              {/* Konversi Satuan */}
+              <div style={{ borderTop: "1px solid rgba(35,32,31,0.08)", paddingTop: 14 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: "#23201F" }}>Konversi Satuan Terhubung</div>
                   <button
                     type="button"
                     onClick={addConversionRow}
                     style={{
-                      height: 34,
-                      padding: "0 14px",
-                      borderRadius: 8,
+                      height: 30,
+                      padding: "0 12px",
+                      borderRadius: 7,
                       border: "1px solid rgba(35,32,31,0.14)",
-                      background: "#fff",
+                      background: "#FFF9F2",
+                      color: "#A91F34",
                       fontFamily: "inherit",
                       fontSize: 12,
                       fontWeight: 700,
                       cursor: "pointer",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 6,
-                      color: "#A91F34",
                     }}
                   >
-                    + Tambah Satuan
+                    + Tambah Konversi
                   </button>
                 </div>
 
                 {formConversions.length === 0 ? (
-                  <div style={{ padding: 20, textAlign: "center", color: "rgba(35,32,31,0.4)", fontSize: 12.5, fontStyle: "italic", background: "rgba(35,32,31,0.02)", borderRadius: 8 }}>
-                    Belum ada konversi satuan sekunder. Klik <strong>+ Tambah Satuan</strong> untuk menambahkan.
+                  <div style={{ fontSize: 12, color: "rgba(35,32,31,0.45)", fontStyle: "italic" }}>
+                    Belum ada konversi satuan. Klik tombol di atas untuk menambah (misal: 1 kg = 1000 gram).
                   </div>
                 ) : (
-                  <div>
-                    <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1.4fr 1.2fr 1.2fr 0.5fr", gap: 8, padding: "6px 8px", background: "rgba(35,32,31,0.04)", borderRadius: 8, fontSize: 11, fontWeight: 700, color: "rgba(35,32,31,0.5)", marginBottom: 8 }}>
-                      <div>Satuan</div>
-                      <div>Konversi (Per {formPrimaryUnit || "Satuan"})</div>
-                      <div>Harga Beli</div>
-                      <div>SKU Satuan</div>
-                      <div style={{ textAlign: "right" }}>Aksi</div>
-                    </div>
-
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                     {formConversions.map((uc, idx) => (
-                      <div key={uc.id} style={{ display: "grid", gridTemplateColumns: "1.2fr 1.4fr 1.2fr 1.2fr 0.5fr", gap: 8, marginBottom: 8, alignItems: "center" }}>
+                      <div key={uc.id || idx} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr 30px", gap: 8, alignItems: "center" }}>
                         <input
                           value={uc.unit}
                           onChange={(e) => {
@@ -771,10 +1293,10 @@ export function RawMaterialManager() {
                           <button
                             type="button"
                             onClick={() => setFormConversions(formConversions.filter((_, i) => i !== idx))}
-                            style={{ border: "none", background: "none", cursor: "pointer", fontSize: 15 }}
+                            style={{ border: "none", background: "none", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
                             title="Hapus konversi satuan"
                           >
-                            🗑️
+                            {ic("trash", 15, "#B83636", 2)}
                           </button>
                         </div>
                       </div>

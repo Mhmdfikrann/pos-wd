@@ -14,6 +14,8 @@ import { KasirPage } from "@/components/owner/KasirPage";
 import { CatalogManager, CATALOG_LABELS } from "@/components/owner/CatalogManager";
 import { OnlinePricingManager } from "@/components/owner/OnlinePricingManager";
 import { RawMaterialManager } from "@/components/owner/RawMaterialManager";
+import { StockManager } from "@/components/owner/StockManager";
+import { SupplierManager } from "@/components/owner/SupplierManager";
 import { PurchaseManager, PURCHASE_LABELS } from "@/components/owner/PurchaseManager";
 import { defaultDateRange, type DateRangeValue } from "@/components/DateRangeFilter";
 import { actionGetOwnerReportForRange } from "@/lib/report-actions";
@@ -43,6 +45,10 @@ function PageEl({
     el = <OnlinePricingManager />;
   } else if (active === "Daftar Bahan Baku") {
     el = <RawMaterialManager />;
+  } else if (active === "Daftar Stok") {
+    el = <StockManager />;
+  } else if (active === "Daftar Pemasok") {
+    el = <SupplierManager />;
   } else if (PURCHASE_LABELS.includes(active)) {
     el = <PurchaseManager key={active} label={active} />;
   } else if (CATALOG_LABELS.includes(active)) {

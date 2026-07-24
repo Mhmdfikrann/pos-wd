@@ -122,9 +122,95 @@ export function tableData(label: string): TableData {
       ],
     );
 
-  if (/stok|persediaan|bahan|produksi|opname|mutasi|transit|retur|pembelian|pemesanan|permintaan|faktur pembelian/.test(l))
+  if (/stok opname|opname/.test(l))
     return mk(
-      [["Total SKU", "156", null], ["Nilai Persediaan", "Rp 48,7 jt", null], ["Perlu Restock", "12", "down"]],
+      [["Total Opname", "24 Kali", null], ["Selisih Qty", "-14 Item", "down"], ["Total Selisih Rp", "-Rp 420.000", "down"]],
+      [
+        { k: "no", label: "No. Opname", w: "1.4fr", kind: "mono" },
+        { k: "d", label: "Tanggal & Jam", w: "1.5fr", kind: "mono" },
+        { k: "o", label: "Outlet", w: "1.6fr" },
+        { k: "p", label: "Auditor", w: "1.5fr", kind: "strong" },
+        { k: "item", label: "Total Item", w: "1fr", align: "center", kind: "mono" },
+        { k: "qty", label: "Selisih Qty", w: "1.4fr", align: "center", kind: "mono" },
+        { k: "val", label: "Total Selisih", w: "1.3fr", align: "right", kind: "mono" },
+        { k: "st", label: "Status", w: "1fr", kind: "badge" },
+        A,
+      ],
+      [
+        { no: "OP-2026-004", d: "24 Jul 2026 18:00", o: "Outlet Utama - Jakarta", p: "Budi (Inventory Lead)", item: "45 Item", qty: "-4 Qty", val: "-Rp 180.000", st: ["Selesai", "ok"] },
+        { no: "OP-2026-003", d: "17 Jul 2026 17:30", o: "Cabang Bandung", p: "Agus (Auditor)", item: "38 Item", qty: "0 Qty", val: "Rp 0", st: ["Selesai", "ok"] },
+        { no: "OP-2026-002", d: "10 Jul 2026 18:15", o: "Outlet Utama - Jakarta", p: "Siti (Admin Stok)", item: "52 Item", qty: "-6 Qty", val: "-Rp 240.000", st: ["Selesai", "ok"] },
+        { no: "OP-2026-001", d: "03 Jul 2026 17:00", o: "Cabang Bandung", p: "Agus (Auditor)", item: "30 Item", qty: "+2 Qty", val: "+Rp 90.000", st: ["Selesai", "ok"] },
+      ],
+    );
+
+  if (/stok terbuang|terbuang|waste/.test(l))
+    return mk(
+      [["Kejadian Waste", "18 Kali", "down"], ["Volume Terbuang", "32.5 kg/pack", null], ["Total Kerugian", "Rp 1.450.000", "down"]],
+      [
+        { k: "no", label: "No. Waste", w: "1.3fr", kind: "mono" },
+        { k: "d", label: "Tanggal & Jam", w: "1.5fr", kind: "mono" },
+        { k: "item", label: "Barang / SKU", w: "2fr", kind: "sub" },
+        { k: "o", label: "Outlet", w: "1.4fr" },
+        { k: "qty", label: "Qty Waste", w: "1fr", align: "center", kind: "mono" },
+        { k: "reason", label: "Alasan Terbuang", w: "1.8fr" },
+        { k: "val", label: "Kerugian", w: "1.3fr", align: "right", kind: "mono" },
+        { k: "p", label: "Pelapor", w: "1.4fr" },
+        A,
+      ],
+      [
+        { no: "WST-2026-012", d: "24 Jul 2026 14:15", item: ["Daging Ayam Giling", "SKU: BB-001"], o: "Outlet Utama - Jakarta", qty: "2.5 kg", reason: "Kedaluwarsa / Busuk", val: rp(112500), p: "Budi (Kitchen Lead)" },
+        { no: "WST-2026-011", d: "23 Jul 2026 16:30", item: ["Kulit Dimsum Tipis", "SKU: BB-002"], o: "Outlet Utama - Jakarta", qty: "5 pack", reason: "Sobek Saat Olah", val: rp(60000), p: "Siti (Cook)" },
+        { no: "WST-2026-010", d: "21 Jul 2026 11:20", item: ["Udang Kupas Fresh", "SKU: BB-003"], o: "Cabang Bandung", qty: "1.8 kg", reason: "Freezer Drop (Basi)", val: rp(171000), p: "Agus (Chef)" },
+        { no: "WST-2026-009", d: "19 Jul 2026 20:00", item: ["Box Takeaway L", "SKU: KM-001"], o: "Outlet Utama - Jakarta", qty: "25 pcs", reason: "Ketumpahan Air", val: rp(55000), p: "Rian (Packer)" },
+      ],
+    );
+
+  if (/acuan produksi/.test(l))
+    return mk(
+      [["Total Acuan", "14 Acuan", null], ["Bahan Terdaftar", "42 Jenis", null], ["Rata-rata HPP", "Rp 9.500", null]],
+      [
+        { k: "code", label: "Kode Acuan", w: "1.3fr", kind: "mono" },
+        { k: "n", label: "Nama Acuan Produksi", w: "2.2fr", kind: "sub" },
+        { k: "output", label: "Hasil Standar Batch", w: "1.6fr" },
+        { k: "matCount", label: "Bahan", w: "0.9fr", align: "center", kind: "mono" },
+        { k: "estHpp", label: "Estimasi HPP/Porsi", w: "1.4fr", align: "right", kind: "mono" },
+        { k: "st", label: "Status", w: "1fr", kind: "badge" },
+        A,
+      ],
+      [
+        { code: "ACU-DIM-01", n: ["Acuan Standar Dimsum Ayam 100 Porsi", "Daging Ayam + Kulit Dimsum"], output: "100 Porsi (400 pcs)", matCount: "6 Bahan", estHpp: rp(9200), st: ["Aktif", "ok"] },
+        { code: "ACU-HAK-02", n: ["Acuan Premium Hakau Udang 50 Porsi", "Udang Kupas + Tepung Tangmin"], output: "50 Porsi (200 pcs)", matCount: "5 Bahan", estHpp: rp(12400), st: ["Aktif", "ok"] },
+        { code: "ACU-LMP-01", n: ["Acuan Lumpia Kulit Tahu 80 Porsi", "Daging Ayam + Kucai + Kulit Tahu"], output: "80 Porsi (240 pcs)", matCount: "7 Bahan", estHpp: rp(8800), st: ["Aktif", "ok"] },
+        { code: "ACU-PAO-03", n: ["Acuan Pao Custard Telur Asin 60 Porsi", "Tepung Pao + Kuning Telur Asin"], output: "60 Porsi (180 pcs)", matCount: "8 Bahan", estHpp: rp(11000), st: ["Aktif", "ok"] },
+      ],
+    );
+
+  if (/daftar produksi|produksi stok/.test(l))
+    return mk(
+      [["Total Batch", "36 Batch", "up"], ["Hasil Produksi", "1.420 Porsi", "up"], ["Biaya Bahan", "Rp 18,5 jt", null]],
+      [
+        { k: "no", label: "No. Batch Produksi", w: "1.5fr", kind: "mono" },
+        { k: "d", label: "Tanggal Produksi", w: "1.3fr", kind: "mono" },
+        { k: "item", label: "Produk Hasil", w: "2fr", kind: "sub" },
+        { k: "o", label: "Outlet Produksi", w: "1.5fr" },
+        { k: "target", label: "Target Qty", w: "1fr", align: "center", kind: "mono" },
+        { k: "real", label: "Hasil Real", w: "1fr", align: "center", kind: "mono" },
+        { k: "hpp", label: "HPP / Porsi", w: "1.2fr", align: "right", kind: "mono" },
+        { k: "st", label: "Status", w: "1fr", kind: "badge" },
+        A,
+      ],
+      [
+        { no: "PRD-2026-044", d: "24 Jul 2026", item: ["Dimsum Ayam Original", "Acuan: ACU-DIM-01"], o: "Dapur Pusat - Jakarta", target: "300 porsi", real: "300 porsi", hpp: rp(9200), st: ["Selesai", "ok"] },
+        { no: "PRD-2026-043", d: "23 Jul 2026", item: ["Hakau Udang Super", "Acuan: ACU-HAK-02"], o: "Dapur Pusat - Jakarta", target: "200 porsi", real: "195 porsi", hpp: rp(12400), st: ["Selesai", "ok"] },
+        { no: "PRD-2026-042", d: "22 Jul 2026", item: ["Lumpia Kulit Tahu", "Acuan: ACU-LMP-01"], o: "Dapur Cabang Bandung", target: "150 porsi", real: "150 porsi", hpp: rp(8800), st: ["Selesai", "ok"] },
+        { no: "PRD-2026-041", d: "21 Jul 2026", item: ["Pao Telur Asin Melt", "Acuan: ACU-PAO-03"], o: "Dapur Pusat - Jakarta", target: "100 porsi", real: "98 porsi", hpp: rp(11000), st: ["Selesai", "ok"] },
+      ],
+    );
+
+  if (/daftar stok|stok|persediaan|bahan|mutasi|transit|retur|pembelian|pemesanan|permintaan|faktur pembelian/.test(l))
+    return mk(
+      [["Total SKU Stok", "156 SKU", null], ["Nilai Persediaan", "Rp 48,7 jt", null], ["Perlu Restock", "12 SKU", "down"]],
       [
         { k: "n", label: "Bahan / Produk", w: "2fr", kind: "sub" },
         { k: "sku", label: "SKU", w: "1fr", kind: "mono" },
